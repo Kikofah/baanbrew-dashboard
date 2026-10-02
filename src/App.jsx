@@ -1,21 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import Papa from 'papaparse'
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
-import {
   computeKpis,
   formatNumber,
   formatTHB,
   formatThaiShortDate,
   prepareRows,
-  salesByBranch,
+  thaiDateKey,
 } from './lib/metrics'
 import { latestSaleDate, useSales } from './lib/useSales'
 import { addDays, bangkokNowLocal } from './lib/options'
@@ -24,11 +15,9 @@ import SalesForm from './components/SalesForm.jsx'
 import AuthButton from './components/AuthButton.jsx'
 import { useAuth } from './lib/useAuth'
 import Lab2Page from './lab2/Lab2Page.jsx'
-import { FixedChart1, FixedChart3, FixedChart4, FixedChart5 } from './lab2/FixedCharts.jsx'
-
-// Compact axis labels: 1,250,000 -> ฿1.3M
-const compactTHB = (value) =>
-  `฿${new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)}`
+import CustomersPage from './components/CustomersPage.jsx'
+import { prepareCustomers } from './lib/customerMetrics'
+import { FixedChart1, FixedChart2, FixedChart3, FixedChart4, FixedChart5 } from './lab2/FixedCharts.jsx'
 
 async function loadCsv(file) {
   const res = await fetch(`${import.meta.env.BASE_URL}${file}`)
@@ -40,6 +29,7 @@ async function loadCsv(file) {
 
 const PAGES = [
   { hash: '', label: 'ภาพรวม' },
+  { hash: '#customers', label: 'ลูกค้า' },
   { hash: '#lab2', label: 'Lab 2.2 · ซ่อมกราฟ' },
 ]
 
@@ -53,52 +43,71 @@ function useHash() {
   return hash
 }
 
-function Nav({ hash, auth }) {
+function Logo() {
   return (
-    <nav className="mx-auto mb-4 flex max-w-6xl flex-wrap items-center gap-2 sm:mb-6">
-      {PAGES.map((p) => (
-        <a
-          key={p.hash}
-          href={p.hash || '#'}
-          className={`rounded-full px-3 py-1 text-sm font-medium ${
-            hash === p.hash || (!p.hash && hash === '#') ? 'bg-amber-900 text-white' : 'text-amber-900 hover:bg-amber-100'
-          }`}
-        >
-          {p.label}
-        </a>
-      ))}
-      <div className="ml-auto">
-        <AuthButton auth={auth} />
-      </div>
-    </nav>
+    <svg viewBox="0 0 32 32" className="h-8 w-8 shrink-0" aria-hidden="true">
+      <rect width="32" height="32" rx="9" className="fill-brand-700" />
+      <path d="M9 13h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-5Z" fill="#fff" />
+      <path d="M20 14.5h1.5a2.5 2.5 0 0 1 0 5H20" fill="none" stroke="#fff" strokeWidth="1.8" />
+      <path d="M12.5 8.5c0 1.2 1.5 1.3 1.5 2.5M16 8.5c0 1.2 1.5 1.3 1.5 2.5" fill="none" stroke="#f6ead8" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
   )
 }
 
-function KpiCard({ label, value }) {
+/** Sticky top bar: brand, page tabs, sign-in; filters on a second row (sticky from sm up) */
+function TopBar({ hash, auth, children }) {
+  const isActive = (p) => hash === p.hash || (!p.hash && (hash === '' || hash === '#'))
   return (
-    <div className="min-w-0 rounded-xl border border-amber-100 bg-white p-3 shadow-sm sm:p-5">
-      <p className="text-xs text-stone-500 sm:text-sm">{label}</p>
-      <p className="mt-1 truncate text-lg font-semibold tabular-nums text-stone-900 sm:mt-2 sm:text-2xl">
-        {value}
-      </p>
+    <header className="z-20 border-b border-stone-200/70 bg-page/90 backdrop-blur sm:sticky sm:top-0">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-6">
+        <a href="#" className="flex items-center gap-2.5">
+          <Logo />
+          <span className="leading-tight">
+            <span className="block text-base font-bold text-brand-900">บ้านบรู</span>
+            <span className="block text-xs text-stone-500">Sales Dashboard</span>
+          </span>
+        </a>
+        <nav className="order-last -mx-1 flex w-full gap-1 overflow-x-auto rounded-xl bg-stone-200/50 p-1 sm:order-none sm:mx-0 sm:w-auto">
+          {PAGES.map((p) => (
+            <a key={p.hash} href={p.hash || '#'} className={`tab ${isActive(p) ? 'tab-active' : ''}`} aria-current={isActive(p) ? 'page' : undefined}>
+              {p.label}
+            </a>
+          ))}
+        </nav>
+        <div className="ml-auto">
+          <AuthButton auth={auth} />
+        </div>
+      </div>
+      <div className="border-t border-stone-200/60">
+        <div className="mx-auto max-w-6xl px-4 py-2.5 sm:px-6">{children}</div>
+      </div>
+    </header>
+  )
+}
+
+function KpiCard({ label, value, note }) {
+  return (
+    <div className="card kpi">
+      <p className="kpi-label">{label}</p>
+      <p className="kpi-value">{value}</p>
+      {note && <p className="kpi-note">{note}</p>}
     </div>
   )
 }
 
 function ChartCard({ title, children }) {
   return (
-    <section className="rounded-xl border border-amber-100 bg-white p-3 shadow-sm sm:p-5">
-      <h2 className="mb-3 text-sm font-semibold text-stone-800 sm:mb-4 sm:text-base">{title}</h2>
+    <section className="card">
+      <h2 className="card-title mb-2">{title}</h2>
       <div className="h-64 sm:h-80">{children}</div>
     </section>
   )
 }
 
-
 function Notice({ children, tone = 'muted' }) {
   const color = tone === 'error' ? 'text-red-600' : 'text-stone-500'
   return (
-    <div className={`rounded-xl border border-amber-100 bg-white p-8 text-center shadow-sm ${color}`} role="status">
+    <div className={`card py-12 text-center ${color}`} role="status">
       {children}
     </div>
   )
@@ -107,44 +116,35 @@ function Notice({ children, tone = 'muted' }) {
 /** KPI cards + all charts for rows that are already filtered (rows.length > 0) */
 function DashboardCharts({ rows, products }) {
   const kpis = useMemo(() => computeKpis(rows), [rows])
-  const branches = useMemo(() => salesByBranch(rows), [rows])
   const lab2Rows = useMemo(() => prepareRows(rows), [rows])
+  const days = useMemo(() => new Set(rows.map((r) => thaiDateKey(r.datetime))).size, [rows])
 
   return (
     <>
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <KpiCard label="ยอดขายรวม" value={formatTHB(kpis.totalSales)} />
-        <KpiCard label="จำนวนบิล" value={formatNumber(kpis.billCount)} />
-        <KpiCard label="ยอดเฉลี่ยต่อบิล" value={formatTHB(kpis.averagePerBill)} />
-        <KpiCard label="ลูกค้าสมาชิก (ไม่ซ้ำ)" value={formatNumber(kpis.uniqueMembers)} />
+        <KpiCard label="ยอดขายรวม" value={formatTHB(kpis.totalSales)} note={`เฉลี่ย ${formatTHB(Math.round(kpis.totalSales / days))}/วัน · ${formatNumber(days)} วัน`} />
+        <KpiCard label="จำนวนบิล" value={formatNumber(kpis.billCount)} note={`เฉลี่ย ${formatNumber(Math.round(kpis.billCount / days))} บิล/วัน`} />
+        <KpiCard label="ยอดเฉลี่ยต่อบิล" value={formatTHB(kpis.averagePerBill)} note="ยอดขายรวม ÷ จำนวนบิล" />
+        <KpiCard label="ลูกค้าสมาชิก (ไม่ซ้ำ)" value={formatNumber(kpis.uniqueMembers)} note="ไม่นับลูกค้าทั่วไป" />
       </div>
 
       <ChartCard title="ยอดขายรายวัน · ค่าเฉลี่ย 7 วัน">
         <FixedChart3 rows={lab2Rows} />
       </ChartCard>
 
-      <ChartCard title="ยอดขายแยกสาขา (มาก → น้อย)">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={branches} layout="vertical" margin={{ top: 5, right: 16, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" horizontal={false} />
-            <XAxis type="number" tickFormatter={compactTHB} tick={{ fontSize: 11 }} />
-            <YAxis type="category" dataKey="branch" tick={{ fontSize: 12 }} width={84} />
-            <Tooltip formatter={(v) => [formatTHB(v), 'ยอดขาย']} cursor={{ fill: '#fef3c7' }} />
-            <Bar dataKey="sales" fill="#b45309" radius={[0, 4, 4, 0]} isAnimationActive={false} />
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartCard>
-
-      {/* กราฟที่ซ่อมแล้วจาก Lab 2 (กราฟ 2 ซ้ำกับยอดขายแยกสาขา และกราฟ 3 ใช้เป็นกราฟรายวันด้านบนแล้ว) */}
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+      {/* แถวแรก: เรื่องสาขา 2 มุม (ยอดรวม และเทียบกับตัวเอง) · แถวสอง: เมนู และรายเดือน */}
+      <div className="grid gap-5 sm:gap-6 lg:grid-cols-2">
+        <ChartCard title="ยอดขายแยกสาขา">
+          <FixedChart2 rows={lab2Rows} />
+        </ChartCard>
+        <ChartCard title="แต่ละสาขาเทียบกับตัวเอง">
+          <FixedChart5 rows={lab2Rows} />
+        </ChartCard>
         <ChartCard title="เมนูขายดี 10 อันดับแรก">
           <FixedChart1 rows={lab2Rows} products={products} />
         </ChartCard>
         <ChartCard title="ยอดเฉลี่ยต่อวัน รายเดือน">
           <FixedChart4 rows={lab2Rows} />
-        </ChartCard>
-        <ChartCard title="แต่ละสาขาเทียบกับตัวเอง (ช่วงล่าสุด vs ช่วงก่อน)">
-          <FixedChart5 rows={lab2Rows} />
         </ChartCard>
       </div>
     </>
@@ -156,6 +156,7 @@ const rangeLabel = ({ from, to, branch }) =>
 
 function App() {
   const [products, setProducts] = useState(null)
+  const [customers, setCustomers] = useState(null)
   const [filters, setFilters] = useState({ from: '', to: '', branch: '' })
   const [setupError, setSetupError] = useState(null)
   const hash = useHash()
@@ -163,6 +164,9 @@ function App() {
 
   useEffect(() => {
     loadCsv('products.csv').then(setProducts).catch((err) => setSetupError(err.message))
+    loadCsv('customers_clean.csv')
+      .then((raw) => setCustomers(prepareCustomers(raw)))
+      .catch((err) => setSetupError(err.message))
   }, [])
 
   // Default range = the 30 days ending at the latest sale (1 read), or today if the collection is empty
@@ -189,6 +193,7 @@ function App() {
   )
 
   const isLab2 = hash === '#lab2'
+  const isCustomers = hash === '#customers'
   const errorMessage = setupError ?? error
 
   let content
@@ -205,6 +210,10 @@ function App() {
         <p className="mt-1 text-sm">{rangeLabel(filters)} · ลองเปลี่ยนช่วงวันที่หรือสาขา</p>
       </Notice>
     )
+  } else if (isCustomers) {
+    content = customers
+      ? <CustomersPage customers={customers} rows={rows} filters={filters} />
+      : <Notice>กำลังโหลดข้อมูลลูกค้า…</Notice>
   } else if (isLab2) {
     content = <Lab2Page rows={prepareRows(rows)} products={products} />
   } else {
@@ -212,23 +221,24 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen bg-amber-50 px-4 py-6 sm:px-8 sm:py-8">
-      <Nav hash={hash} auth={auth} />
-      <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
-        {!isLab2 && (
-          <header>
-            <h1 className="text-2xl font-bold text-amber-900 sm:text-3xl">บ้านบรู Dashboard</h1>
-            <p className="text-xs text-stone-500 sm:text-sm">
+    <div className="min-h-screen">
+      <TopBar hash={hash} auth={auth}>
+        <SalesFilters value={filters} onChange={setFilters} loading={validRange && loading} />
+      </TopBar>
+      <main className="mx-auto max-w-6xl space-y-5 px-4 py-6 sm:space-y-6 sm:px-6 sm:py-8">
+        {!isLab2 && !isCustomers && (
+          <div>
+            <h1 className="page-title">ภาพรวมยอดขาย</h1>
+            <p className="page-subtitle">
               ข้อมูลจาก Firestore · อัปเดตอัตโนมัติ
               {rows?.length > 0 && <> · {rangeLabel(filters)} · {formatNumber(rows.length)} รายการ</>}
             </p>
-          </header>
+          </div>
         )}
-        <SalesFilters value={filters} onChange={setFilters} loading={validRange && loading} />
-        {!isLab2 && <SalesForm products={products} auth={auth} />}
+        {!isLab2 && !isCustomers && <SalesForm products={products} auth={auth} />}
         {content}
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }
 

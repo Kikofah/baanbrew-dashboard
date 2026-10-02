@@ -30,7 +30,7 @@ const withRevenueAndDate = (rows) =>
 function Frame({ summary, children }) {
   return (
     <div className="flex h-full flex-col">
-      <p className="mb-1 text-sm font-medium text-stone-800">{summary}</p>
+      <p className="mb-2 text-sm leading-relaxed text-stone-600">{summary}</p>
       <div className="min-h-0 flex-1">{children}</div>
     </div>
   );

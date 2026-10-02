@@ -5,12 +5,11 @@ import { formatTHB } from '../lib/metrics'
 import { BRANCHES, CHANNELS, PAYMENT_METHODS, bangkokNowLocal } from '../lib/options'
 import { signIn } from '../lib/useAuth'
 
-const inputClass =
-  'w-full rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-900 focus:border-amber-700 focus:outline-none disabled:bg-stone-100'
+const inputClass = 'input'
 
 function Field({ label, children }) {
   return (
-    <label className="flex flex-col gap-1 text-xs text-stone-500">
+    <label className="field">
       {label}
       {children}
     </label>
@@ -82,16 +81,16 @@ export default function SalesForm({ products, auth }) {
 
   if (!auth.user) {
     return (
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-100 bg-white p-3 shadow-sm sm:p-5">
+      <section className="card flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-stone-800 sm:text-base">บันทึกยอดขาย</h2>
-          <p className="text-sm text-stone-500">
+          <h2 className="card-title">บันทึกยอดขาย</h2>
+          <p className="card-summary">
             {auth.ready ? 'เข้าสู่ระบบก่อนจึงจะบันทึกยอดขายได้' : 'กำลังตรวจสอบการเข้าสู่ระบบ…'}
           </p>
         </div>
         {auth.ready && (
           <button type="button" onClick={() => signIn().catch((err) => setStatus({ saving: false, error: true, message: err.message }))}
-                  className="rounded-lg bg-amber-800 px-4 py-2 text-sm font-medium text-white hover:bg-amber-900">
+                  className="btn-primary">
             เข้าสู่ระบบด้วย Google
           </button>
         )}
@@ -101,9 +100,19 @@ export default function SalesForm({ products, auth }) {
   }
 
   return (
-    <section className="rounded-xl border border-amber-100 bg-white p-3 shadow-sm sm:p-5">
-      <h2 className="mb-3 text-sm font-semibold text-stone-800 sm:text-base">บันทึกยอดขาย</h2>
-      <form onSubmit={submit} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    // Folded by default so the charts come first
+    <details className="card group">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+        <span>
+          <span className="card-title block">บันทึกยอดขาย</span>
+          <span className="card-summary block">เลือกเมนูแล้วราคาจะใส่ให้อัตโนมัติ · บันทึกแล้วกราฟอัปเดตทันที</span>
+        </span>
+        <span className="btn-ghost shrink-0">
+          <span className="group-open:hidden">+ เพิ่มรายการ</span>
+          <span className="hidden group-open:inline">ซ่อน</span>
+        </span>
+      </summary>
+      <form onSubmit={submit} className="mt-4 grid grid-cols-2 gap-3 border-t border-stone-100 pt-4 lg:grid-cols-4">
         <Field label="วันที่และเวลา">
           <input type="datetime-local" className={inputClass} value={form.datetime} onChange={set('datetime')} required />
         </Field>
@@ -151,7 +160,7 @@ export default function SalesForm({ products, auth }) {
           <button
             type="submit"
             disabled={status.saving || !product || !validQty}
-            className="rounded-lg bg-amber-800 px-4 py-2 text-sm font-medium text-white hover:bg-amber-900 disabled:cursor-not-allowed disabled:bg-stone-300"
+            className="btn-primary"
           >
             {status.saving ? 'กำลังบันทึก…' : `บันทึก${product && validQty ? ` · ${formatTHB(unitPrice * qty)}` : ''}`}
           </button>
@@ -160,6 +169,6 @@ export default function SalesForm({ products, auth }) {
           )}
         </div>
       </form>
-    </section>
+    </details>
   )
 }

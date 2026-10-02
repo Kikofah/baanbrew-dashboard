@@ -1,9 +1,6 @@
 import { useState } from 'react'
 import { signIn, signOutUser } from '../lib/useAuth'
 
-const buttonClass =
-  'rounded-full px-3 py-1 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60'
-
 /** Sign-in / sign-out button for the top bar. `auth` = result of useAuth() */
 export default function AuthButton({ auth }) {
   const [busy, setBusy] = useState(false)
@@ -31,19 +28,19 @@ export default function AuthButton({ auth }) {
       {auth.user ? (
         <>
           {auth.user.photoURL && (
-            <img src={auth.user.photoURL} alt="" className="h-7 w-7 shrink-0 rounded-full" referrerPolicy="no-referrer" />
+            <img src={auth.user.photoURL} alt="" className="h-8 w-8 shrink-0 rounded-full ring-2 ring-white" referrerPolicy="no-referrer" />
           )}
-          <span className="hidden truncate text-sm text-stone-700 sm:inline" title={auth.user.email ?? ''}>
+          <span className="hidden max-w-40 truncate text-sm font-medium text-stone-700 md:inline" title={auth.user.email ?? ''}>
             {auth.user.displayName ?? auth.user.email}
           </span>
           <button type="button" onClick={run(signOutUser)} disabled={busy}
-                  className={`${buttonClass} border border-amber-900 text-amber-900 hover:bg-amber-100`}>
+                  className="btn-ghost">
             ออกจากระบบ
           </button>
         </>
       ) : (
         <button type="button" onClick={run(signIn)} disabled={busy}
-                className={`${buttonClass} bg-amber-900 text-white hover:bg-amber-950`}>
+                className="btn-primary py-1.5">
           {busy ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบด้วย Google'}
         </button>
       )}
