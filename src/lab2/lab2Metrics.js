@@ -5,7 +5,11 @@
 export function revenueByProduct(rows, products) {
   const name = Object.fromEntries((products ?? []).map((p) => [p.product_id, p.product_name]));
   const map = new Map();
-  for (const r of rows) map.set(r.product_id, (map.get(r.product_id) ?? 0) + r.revenue);
+  // ข้าม 15 แถวที่ product_id ว่าง (ระบุเมนูไม่ได้ตอนทำความสะอาด) ไม่งั้นจะกลายเป็น "เมนูที่ 41"
+  for (const r of rows) {
+    if (!r.product_id) continue;
+    map.set(r.product_id, (map.get(r.product_id) ?? 0) + r.revenue);
+  }
   const total = [...map.values()].reduce((a, b) => a + b, 0);
   return [...map.entries()]
     .map(([id, revenue]) => ({ id, name: name[id] ?? id, revenue, share: revenue / total }))

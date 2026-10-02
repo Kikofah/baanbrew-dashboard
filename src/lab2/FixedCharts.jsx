@@ -87,13 +87,26 @@ export function FixedChart2({ rows }) {
 /** กราฟ 3: ยอดขายโตหรือลด → เส้นยอดรายสัปดาห์ (เฉพาะสัปดาห์ครบ 7 วัน) ลดความยุ่งของรายวัน */
 const COMPARE_WEEKS = 12;
 export function FixedChart3({ rows }) {
-  const data = useMemo(() => weeklyRevenue(withRevenueAndDate(rows)), [rows]);
+  const prepared = useMemo(() => withRevenueAndDate(rows), [rows]);
+  const data = useMemo(() => weeklyRevenue(prepared), [prepared]);
+  // สาขาที่เปิดหลังวันแรกของข้อมูล ทำให้ยอดรวม "โต" โดยที่สาขาเดิมอาจไม่ได้ขายดีขึ้น
+  const { newBranches, sameStoreData } = useMemo(() => {
+    const firstDay = new Map();
+    for (const r of prepared) if (!firstDay.has(r.branch) || r.date < firstDay.get(r.branch)) firstDay.set(r.branch, r.date);
+    const start = [...firstDay.values()].reduce((a, b) => (a < b ? a : b));
+    const fresh = [...firstDay].filter(([, d]) => d > start).map(([b]) => b);
+    return { newBranches: fresh, sameStoreData: weeklyRevenue(prepared.filter((r) => !fresh.includes(r.branch))) };
+  }, [prepared]);
   const n = Math.min(COMPARE_WEEKS, Math.floor(data.length / 2));
   const avg = (arr) => arr.reduce((s, d) => s + d.revenue, 0) / arr.length;
+  const growth = (weeks) => avg(weeks.slice(-n)) / avg(weeks.slice(0, n)) - 1;
   const firstAvg = avg(data.slice(0, n));
   const lastAvg = avg(data.slice(-n));
   const change = lastAvg / firstAvg - 1;
-  const summary = `ยอดขายเฉลี่ยต่อสัปดาห์ช่วง ${n} สัปดาห์ล่าสุด ${thb(lastAvg)} ${change >= 0 ? "โตขึ้น" : "ลดลง"} ${pct(Math.abs(change))} เทียบกับ ${n} สัปดาห์แรก (${thb(firstAvg)})`;
+  const sameStore = newBranches.length
+    ? ` · ไม่นับ${newBranches.join(", ")}ที่เปิดทีหลัง ${growth(sameStoreData) >= 0 ? "โต" : "ลด"} ${pct(Math.abs(growth(sameStoreData)))}`
+    : "";
+  const summary = `ยอดขายเฉลี่ยต่อสัปดาห์ช่วง ${n} สัปดาห์ล่าสุด ${thb(lastAvg)} ${change >= 0 ? "โตขึ้น" : "ลดลง"} ${pct(Math.abs(change))} เทียบกับ ${n} สัปดาห์แรก (${thb(firstAvg)})${sameStore}`;
   return (
     <Frame summary={summary}>
       <ResponsiveContainer width="100%" height="100%">
@@ -171,7 +184,7 @@ export function FixedChart5({ rows }) {
         <BarChart data={data} layout="vertical" margin={{ top: 0, right: 84, left: 0, bottom: 0 }}>
           <CartesianGrid stroke={GRID} horizontal={false} />
           <XAxis type="number" domain={[0, "auto"]} tickFormatter={compactTHB} tick={{ fontSize: 11 }} />
-          <YAxis type="category" dataKey="label" width={130} tick={{ fontSize: 11 }} />
+          <YAxis type="category" dataKey="label" width={150} tick={{ fontSize: 11 }} />
           <Tooltip
             formatter={(v, _k, item) => [`${thb(v)} / วัน (ยอดรวม ${thb(item.payload.revenue)})`, "ยอดเฉลี่ยต่อวัน"]}
             cursor={{ fill: "#fef3c7" }}

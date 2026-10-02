@@ -139,3 +139,13 @@ export function computeKpis(rows) {
     uniqueMembers: uniqueMemberCount(rows),
   }
 }
+
+/** Adds `revenue` (qty × unit_price) and `date` ('YYYY-MM-DD', Thai time) to every row */
+export function prepareRows(rows) {
+  return rows.map((row) => ({ ...row, revenue: lineTotal(row), date: thaiDateKey(row.datetime) }))
+}
+
+/** [{ date: 'YYYY-MM-DD', revenue }] sorted by date ascending — same as dailySales, named for Lab 2 */
+export function dailyRevenue(rows) {
+  return dailySales(rows).map(({ date, sales }) => ({ date, revenue: sales }))
+}
