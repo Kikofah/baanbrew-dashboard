@@ -27,6 +27,8 @@ import { latestSaleDate, useSales } from './lib/useSales'
 import { addDays, bangkokNowLocal } from './lib/options'
 import SalesFilters from './components/SalesFilters.jsx'
 import SalesForm from './components/SalesForm.jsx'
+import AuthButton from './components/AuthButton.jsx'
+import { useAuth } from './lib/useAuth'
 import Lab2Page from './lab2/Lab2Page.jsx'
 import { FixedChart1, FixedChart3, FixedChart4, FixedChart5 } from './lab2/FixedCharts.jsx'
 
@@ -59,9 +61,9 @@ function useHash() {
   return hash
 }
 
-function Nav({ hash }) {
+function Nav({ hash, auth }) {
   return (
-    <nav className="mx-auto mb-4 flex max-w-6xl gap-2 sm:mb-6">
+    <nav className="mx-auto mb-4 flex max-w-6xl flex-wrap items-center gap-2 sm:mb-6">
       {PAGES.map((p) => (
         <a
           key={p.hash}
@@ -73,6 +75,9 @@ function Nav({ hash }) {
           {p.label}
         </a>
       ))}
+      <div className="ml-auto">
+        <AuthButton auth={auth} />
+      </div>
     </nav>
   )
 }
@@ -200,6 +205,7 @@ function App() {
   const [filters, setFilters] = useState({ from: '', to: '', branch: '' })
   const [setupError, setSetupError] = useState(null)
   const hash = useHash()
+  const auth = useAuth()
 
   useEffect(() => {
     loadCsv('products.csv').then(setProducts).catch((err) => setSetupError(err.message))
@@ -253,7 +259,7 @@ function App() {
 
   return (
     <main className="min-h-screen bg-amber-50 px-4 py-6 sm:px-8 sm:py-8">
-      <Nav hash={hash} />
+      <Nav hash={hash} auth={auth} />
       <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
         {!isLab2 && (
           <header>
@@ -265,7 +271,7 @@ function App() {
           </header>
         )}
         <SalesFilters value={filters} onChange={setFilters} loading={validRange && loading} />
-        {!isLab2 && <SalesForm products={products} />}
+        {!isLab2 && <SalesForm products={products} auth={auth} />}
         {content}
       </div>
     </main>

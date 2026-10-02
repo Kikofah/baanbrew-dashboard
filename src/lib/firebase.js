@@ -3,6 +3,7 @@
 // access is controlled by Firestore Security Rules, not by hiding them.
 import { initializeApp } from 'firebase/app'
 import { getAnalytics, isSupported } from 'firebase/analytics'
+import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
 const env = import.meta.env
@@ -26,6 +27,7 @@ if (missing.length) {
 
 export const app = initializeApp(firebaseConfig)
 export const db = getFirestore(app)
+export const auth = getAuth(app)
 
 // Analytics throws in browsers that block it (cookies off, some private modes),
 // so only start it where supported. Resolves to null otherwise.

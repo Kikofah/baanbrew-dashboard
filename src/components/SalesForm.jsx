@@ -3,6 +3,7 @@ import { addDoc, serverTimestamp } from 'firebase/firestore'
 import { SALES } from '../lib/useSales'
 import { formatTHB } from '../lib/metrics'
 import { BRANCHES, CHANNELS, PAYMENT_METHODS, bangkokNowLocal } from '../lib/options'
+import { signIn } from '../lib/useAuth'
 
 const inputClass =
   'w-full rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-900 focus:border-amber-700 focus:outline-none disabled:bg-stone-100'
@@ -26,8 +27,11 @@ const emptyForm = () => ({
   customer_id: '',
 })
 
-/** Records one line item into Firestore "sales". Price comes from products.csv, not typed in. */
-export default function SalesForm({ products }) {
+/**
+ * Records one line item into Firestore "sales". Price comes from products.csv, not typed in.
+ * Signed-in users only; each sale stores who entered it. `auth` = result of useAuth()
+ */
+export default function SalesForm({ products, auth }) {
   const [form, setForm] = useState(emptyForm)
   const [status, setStatus] = useState({ saving: false, message: null, error: false })
 
@@ -50,7 +54,7 @@ export default function SalesForm({ products }) {
 
   async function submit(e) {
     e.preventDefault()
-    if (!product || !validQty || !form.datetime) return
+    if (!auth.user || !product || !validQty || !form.datetime) return
     setStatus({ saving: true, message: null, error: false })
     const datetime = `${form.datetime}:00+07:00`
     try {
@@ -67,12 +71,33 @@ export default function SalesForm({ products }) {
         channel: form.channel,
         source: 'form',
         created_at: serverTimestamp(),
+        created_by: { uid: auth.user.uid, email: auth.user.email ?? null },
       })
       setStatus({ saving: false, error: false, message: `บันทึก ${product.product_name} × ${qty} = ${formatTHB(unitPrice * qty)} แล้ว` })
       setForm((f) => ({ ...emptyForm(), branch: f.branch, channel: f.channel, payment_method: f.payment_method }))
     } catch (err) {
       setStatus({ saving: false, error: true, message: `บันทึกไม่สำเร็จ: ${err.message}` })
     }
+  }
+
+  if (!auth.user) {
+    return (
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-100 bg-white p-3 shadow-sm sm:p-5">
+        <div>
+          <h2 className="text-sm font-semibold text-stone-800 sm:text-base">บันทึกยอดขาย</h2>
+          <p className="text-sm text-stone-500">
+            {auth.ready ? 'เข้าสู่ระบบก่อนจึงจะบันทึกยอดขายได้' : 'กำลังตรวจสอบการเข้าสู่ระบบ…'}
+          </p>
+        </div>
+        {auth.ready && (
+          <button type="button" onClick={() => signIn().catch((err) => setStatus({ saving: false, error: true, message: err.message }))}
+                  className="rounded-lg bg-amber-800 px-4 py-2 text-sm font-medium text-white hover:bg-amber-900">
+            เข้าสู่ระบบด้วย Google
+          </button>
+        )}
+        {status.error && <p role="alert" className="w-full text-sm text-red-600">{status.message}</p>}
+      </section>
+    )
   }
 
   return (
