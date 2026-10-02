@@ -30,7 +30,7 @@ const compactTHB = (value) =>
 const SERIES_NAMES = { sales: 'ยอดขายรายวัน', ma7: 'ค่าเฉลี่ย 7 วัน' }
 
 async function loadSales() {
-  const res = await fetch('/sales.xlsx')
+  const res = await fetch(`${import.meta.env.BASE_URL}sales.xlsx`)
   if (!res.ok) throw new Error(`โหลดไฟล์ไม่สำเร็จ (${res.status})`)
   const workbook = XLSX.read(await res.arrayBuffer())
   const sheet = workbook.Sheets[workbook.SheetNames[0]]
