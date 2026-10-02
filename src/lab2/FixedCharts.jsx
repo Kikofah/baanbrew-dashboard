@@ -3,12 +3,14 @@
 import { useMemo } from "react";
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, LabelList,
+  XAxis, YAxis, CartesianGrid, Tooltip, LabelList, Legend, ReferenceLine,
 } from "recharts";
 import {
-  revenueByProduct, monthlyRevenue, branchPerformance, weeklyRevenue, daysInMonth, thaiMonth,
+  revenueByProduct, monthlyRevenue, branchPerformance, branchGrowth, daysInMonth, thaiMonth,
 } from "./lab2Metrics.js";
-import { formatTHB, formatThaiShortDate, formatThaiLongDate, lineTotal, thaiDateKey } from "../lib/metrics.js";
+import {
+  dailySales, formatTHB, formatThaiShortDate, formatThaiLongDate, lineTotal, thaiDateKey, withMovingAverage,
+} from "../lib/metrics.js";
 
 const MAIN = "#b45309";
 const GRID = "#e7e5e4";
@@ -86,39 +88,55 @@ export function FixedChart2({ rows }) {
   );
 }
 
-/** กราฟ 3: ยอดขายโตหรือลด → เส้นยอดรายสัปดาห์ (เฉพาะสัปดาห์ครบ 7 วัน) ลดความยุ่งของรายวัน */
-const COMPARE_WEEKS = 12;
+/**
+ * กราฟ 3: ยอดขายโตหรือลด → ยอดรายวันเส้นจาง + ค่าเฉลี่ยเคลื่อนที่ 7 วันเส้นเข้ม
+ * MA7 ตัดวงจรวันธรรมดา/เสาร์-อาทิตย์ออกพอดี แต่ยังเห็นรายวันเป็นฉากหลัง (ต่างจากรายสัปดาห์ที่ต้องทิ้งสัปดาห์ไม่ครบ)
+ */
+const COMPARE_DAYS = 84; // 12 สัปดาห์
+const MA_DAYS = 7;
+const SERIES = { sales: "ยอดขายรายวัน", ma7: "ค่าเฉลี่ย 7 วัน" };
 export function FixedChart3({ rows }) {
-  const prepared = useMemo(() => withRevenueAndDate(rows), [rows]);
-  const data = useMemo(() => weeklyRevenue(prepared), [prepared]);
+  const data = useMemo(() => withMovingAverage(dailySales(rows), MA_DAYS), [rows]);
   // สาขาที่เปิดหลังวันแรกของข้อมูล ทำให้ยอดรวม "โต" โดยที่สาขาเดิมอาจไม่ได้ขายดีขึ้น
-  const { newBranches, sameStoreData } = useMemo(() => {
+  const { newBranches, sameStoreDaily } = useMemo(() => {
     const firstDay = new Map();
-    for (const r of prepared) if (!firstDay.has(r.branch) || r.date < firstDay.get(r.branch)) firstDay.set(r.branch, r.date);
-    const start = [...firstDay.values()].reduce((a, b) => (a < b ? a : b));
+    for (const r of rows) {
+      const d = thaiDateKey(r.datetime);
+      if (!firstDay.has(r.branch) || d < firstDay.get(r.branch)) firstDay.set(r.branch, d);
+    }
+    const start = [...firstDay.values()].reduce((a, b) => (a < b ? a : b), "9999");
     const fresh = [...firstDay].filter(([, d]) => d > start).map(([b]) => b);
-    return { newBranches: fresh, sameStoreData: weeklyRevenue(prepared.filter((r) => !fresh.includes(r.branch))) };
-  }, [prepared]);
-  const n = Math.min(COMPARE_WEEKS, Math.floor(data.length / 2));
-  const avg = (arr) => arr.reduce((s, d) => s + d.revenue, 0) / arr.length;
-  const growth = (weeks) => avg(weeks.slice(-n)) / avg(weeks.slice(0, n)) - 1;
-  const firstAvg = avg(data.slice(0, n));
-  const lastAvg = avg(data.slice(-n));
-  const change = lastAvg / firstAvg - 1;
+    return { newBranches: fresh, sameStoreDaily: dailySales(rows.filter((r) => !fresh.includes(r.branch))) };
+  }, [rows]);
+
+  if (data.length < MA_DAYS * 2) {
+    return <Frame summary={`ช่วงที่เลือกมีข้อมูล ${data.length} วัน — ต้องมีอย่างน้อย ${MA_DAYS * 2} วันจึงจะเห็นแนวโน้มของค่าเฉลี่ย 7 วัน`} />;
+  }
+  // เทียบยอดเฉลี่ยต่อวัน n วันล่าสุดกับ n วันแรก (n ≤ 12 สัปดาห์ และไม่เกินครึ่งช่วง)
+  const n = Math.min(COMPARE_DAYS, Math.floor(data.length / 2));
+  const avg = (days) => days.reduce((sum, d) => sum + d.sales, 0) / days.length;
+  const growth = (daily) => avg(daily.slice(-n)) / avg(daily.slice(0, n)) - 1;
+  const change = growth(data);
+  const latestMa = data.at(-1).ma7;
   const sameStore = newBranches.length
-    ? ` · ไม่นับ${newBranches.join(", ")}ที่เปิดทีหลัง ${growth(sameStoreData) >= 0 ? "โต" : "ลด"} ${pct(Math.abs(growth(sameStoreData)))}`
+    ? ` · ไม่นับ${newBranches.join(", ")}ที่เปิดทีหลัง ${growth(sameStoreDaily) >= 0 ? "โต" : "ลด"} ${pct(Math.abs(growth(sameStoreDaily)))}`
     : "";
-  if (n < 1) return <Frame summary="ช่วงที่เลือกมีสัปดาห์ที่ครบ 7 วันไม่ถึง 2 สัปดาห์ — เลือกช่วงให้ยาวขึ้นเพื่อดูแนวโน้ม" />;
-  const summary = `ยอดขายเฉลี่ยต่อสัปดาห์ช่วง ${n} สัปดาห์ล่าสุด ${thb(lastAvg)} ${change >= 0 ? "โตขึ้น" : "ลดลง"} ${pct(Math.abs(change))} เทียบกับ ${n} สัปดาห์แรก (${thb(firstAvg)})${sameStore}`;
+  const summary = `ค่าเฉลี่ย 7 วันล่าสุด ${thb(latestMa)}/วัน · ${n} วันล่าสุด${change >= 0 ? "โตขึ้น" : "ลดลง"} ${pct(Math.abs(change))} เทียบกับ ${n} วันแรก${sameStore}`;
+
   return (
     <Frame summary={summary}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 5, right: 12, left: 0, bottom: 0 }}>
           <CartesianGrid stroke={GRID} vertical={false} />
-          <XAxis dataKey="week" tickFormatter={formatThaiShortDate} minTickGap={40} tick={{ fontSize: 11 }} />
+          <XAxis dataKey="date" tickFormatter={formatThaiShortDate} minTickGap={48} tick={{ fontSize: 11 }} />
           <YAxis domain={[0, "auto"]} tickFormatter={compactTHB} width={56} tick={{ fontSize: 11 }} />
-          <Tooltip formatter={(v) => [thb(v), "ยอดขายสัปดาห์นี้"]} labelFormatter={(w) => `สัปดาห์เริ่ม ${formatThaiLongDate(w)}`} />
-          <Line dataKey="revenue" stroke={MAIN} strokeWidth={2} dot={false} isAnimationActive={false} />
+          <Tooltip
+            formatter={(v, key) => [thb(v), SERIES[key]]}
+            labelFormatter={formatThaiLongDate}
+          />
+          <Legend formatter={(key) => SERIES[key]} wrapperStyle={{ fontSize: 12 }} />
+          <Line dataKey="sales" stroke={MAIN} strokeOpacity={0.3} strokeWidth={1} dot={false} isAnimationActive={false} />
+          <Line dataKey="ma7" stroke={MAIN} strokeWidth={2.5} dot={false} connectNulls={false} isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
     </Frame>
@@ -167,37 +185,52 @@ export function FixedChart4({ rows }) {
   );
 }
 
-/** กราฟ 5: ผลงานผู้จัดการสาขา → จัดอันดับด้วย "ยอดเฉลี่ยต่อวันที่เปิดขาย" ให้ยุติธรรมกับสาขาที่เพิ่งเปิด */
+/**
+ * กราฟ 5: ผลงานผู้จัดการสาขา → ให้แต่ละสาขา "เทียบกับตัวเอง" (ช่วงล่าสุด vs ช่วงก่อนหน้าที่ยาวเท่ากัน)
+ * ยอดขายสะท้อนทำเลและอายุสาขาด้วย การเทียบกับตัวเองตัดสองเรื่องนี้ออก เหลือแค่ทิศทางที่สาขากำลังไป
+ */
+const signedPct = (v) => `${v >= 0 ? "+" : "−"}${pct(Math.abs(v))}`;
 export function FixedChart5({ rows }) {
-  const data = useMemo(
-    () => branchPerformance(withRevenueAndDate(rows))
-      .map((b) => ({ ...b, label: `${b.branch} · ${b.days} วัน` }))
-      .sort((a, b) => b.perDay - a.perDay),
-    [rows]
-  );
-  const lowest = data[data.length - 1];
-  const fewestDays = data.reduce((m, b) => (b.days < m.days ? b : m));
-  const byTotal = [...data].sort((a, b) => a.revenue - b.revenue)[0];
-  const summary = `วัดด้วยยอดเฉลี่ยต่อวัน ${lowest.branch}ต่ำสุด ${thb(lowest.perDay)}/วัน${
-    byTotal.branch !== lowest.branch
-      ? ` ไม่ใช่${byTotal.branch}ที่ยอดรวมน้อยสุด (${byTotal.branch}เปิดขายเพียง ${byTotal.days} วัน)`
-      : data.every((b) => b.days === fewestDays.days)
-        ? ` · ทุกสาขาเปิดขายเท่ากัน ${fewestDays.days} วัน`
-        : ` · ${fewestDays.branch}เปิดขายน้อยสุด ${fewestDays.days} วัน`
-  }`;
+  const result = useMemo(() => branchGrowth(withRevenueAndDate(rows)), [rows]);
+  const data = result.branches.filter((b) => b.comparable).sort((a, b) => b.growth - a.growth);
+  const notComparable = result.branches.filter((b) => !b.comparable);
+
+  if (result.periodDays === 0) {
+    return <Frame summary="ช่วงที่เลือกสั้นกว่า 14 วัน — ต้องมีอย่างน้อย 2 สัปดาห์จึงจะเทียบช่วงล่าสุดกับช่วงก่อนหน้าได้" />;
+  }
+  const period = `${result.periodDays} วันล่าสุด (${formatThaiShortDate(result.curFrom)}–${formatThaiShortDate(result.curTo)}) เทียบ ${result.periodDays} วันก่อนหน้า`;
+  const skipped = notComparable.length
+    ? ` · ${notComparable.map((b) => b.branch).join(", ")}เปิดกลางช่วง ยังเทียบไม่ได้`
+    : "";
+  if (!data.length) return <Frame summary={`${period}${skipped}`} />;
+
+  const best = data[0];
+  const worst = data.at(-1);
+  const worstText = worst.growth < 0 ? `${worst.branch}ลดมากสุด ${signedPct(worst.growth)}` : `${worst.branch}โตน้อยสุด ${signedPct(worst.growth)}`;
+  const summary = data.length > 1
+    ? `${period}: ${best.branch}${best.growth >= 0 ? "โต" : "ลด"}มากสุด ${signedPct(best.growth)} · ${worstText}${skipped}`
+    : `${period}: ${best.branch} ${signedPct(best.growth)}${skipped}`;
+  // แกนสมมาตรรอบ 0 ให้ความยาวแท่งบวก/ลบเทียบกันได้ ปัดขึ้นทีละ 5% ให้ป้ายแกนเป็นเลขกลม
+  const reach = Math.ceil((Math.max(...data.map((b) => Math.abs(b.growth))) * 1.1) / 0.05) * 0.05 || 0.05;
+  const ticks = [-reach, -reach / 2, 0, reach / 2, reach];
+
   return (
     <Frame summary={summary}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 84, left: 0, bottom: 0 }}>
+        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 56, left: 0, bottom: 0 }}>
           <CartesianGrid stroke={GRID} horizontal={false} />
-          <XAxis type="number" domain={[0, "auto"]} tickFormatter={compactTHB} tick={{ fontSize: 11 }} />
-          <YAxis type="category" dataKey="label" width={150} tick={{ fontSize: 11 }} />
+          <XAxis type="number" domain={[-reach, reach]} ticks={ticks} tickFormatter={(v) => (v === 0 ? "0%" : signedPct(v))} tick={{ fontSize: 11 }} />
+          <YAxis type="category" dataKey="branch" width={84} tick={{ fontSize: 12 }} />
+          <ReferenceLine x={0} stroke="#78716c" />
           <Tooltip
-            formatter={(v, _k, item) => [`${thb(v)} / วัน (ยอดรวม ${thb(item.payload.revenue)})`, "ยอดเฉลี่ยต่อวัน"]}
+            formatter={(v, _k, item) => [
+              `${signedPct(v)} (${thb(item.payload.prevPerDay)} → ${thb(item.payload.curPerDay)} ต่อวัน)`,
+              "เทียบช่วงก่อนหน้า",
+            ]}
             cursor={{ fill: "#fef3c7" }}
           />
-          <Bar dataKey="perDay" fill={MAIN} radius={[0, 3, 3, 0]} isAnimationActive={false}>
-            <LabelList dataKey="perDay" position="right" formatter={(v) => `${thb(v)}/วัน`} style={{ fontSize: 11, fill: "#44403c" }} />
+          <Bar dataKey="growth" fill={MAIN} radius={3} isAnimationActive={false}>
+            <LabelList dataKey="growth" position="right" formatter={signedPct} style={{ fontSize: 11, fill: "#44403c" }} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>

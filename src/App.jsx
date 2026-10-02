@@ -4,9 +4,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -14,14 +11,11 @@ import {
 } from 'recharts'
 import {
   computeKpis,
-  dailySales,
   formatNumber,
   formatTHB,
-  formatThaiLongDate,
   formatThaiShortDate,
   prepareRows,
   salesByBranch,
-  withMovingAverage,
 } from './lib/metrics'
 import { latestSaleDate, useSales } from './lib/useSales'
 import { addDays, bangkokNowLocal } from './lib/options'
@@ -36,8 +30,6 @@ import { FixedChart1, FixedChart3, FixedChart4, FixedChart5 } from './lab2/Fixed
 const compactTHB = (value) =>
   `฿${new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)}`
 
-const SERIES_NAMES = { sales: 'ยอดขายรายวัน', ma7: 'ค่าเฉลี่ย 7 วัน' }
-
 async function loadCsv(file) {
   const res = await fetch(`${import.meta.env.BASE_URL}${file}`)
   if (!res.ok) throw new Error(`โหลดไฟล์ ${file} ไม่สำเร็จ (${res.status})`)
@@ -47,8 +39,8 @@ async function loadCsv(file) {
 }
 
 const PAGES = [
-  { hash: '', label: 'Dashboard' },
-  { hash: '#lab2', label: 'Lab 2 · ซ่อมกราฟแย่' },
+  { hash: '', label: 'ภาพรวม' },
+  { hash: '#lab2', label: 'Lab 2.2 · ซ่อมกราฟ' },
 ]
 
 function useHash() {
@@ -115,7 +107,6 @@ function Notice({ children, tone = 'muted' }) {
 /** KPI cards + all charts for rows that are already filtered (rows.length > 0) */
 function DashboardCharts({ rows, products }) {
   const kpis = useMemo(() => computeKpis(rows), [rows])
-  const daily = useMemo(() => withMovingAverage(dailySales(rows)), [rows])
   const branches = useMemo(() => salesByBranch(rows), [rows])
   const lab2Rows = useMemo(() => prepareRows(rows), [rows])
 
@@ -128,42 +119,8 @@ function DashboardCharts({ rows, products }) {
         <KpiCard label="ลูกค้าสมาชิก (ไม่ซ้ำ)" value={formatNumber(kpis.uniqueMembers)} />
       </div>
 
-      <ChartCard title="ยอดขายรายวัน">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={daily} margin={{ top: 5, right: 8, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
-            <XAxis
-              dataKey="date"
-              tickFormatter={formatThaiShortDate}
-              tick={{ fontSize: 11 }}
-              minTickGap={48}
-            />
-            <YAxis tickFormatter={compactTHB} tick={{ fontSize: 11 }} width={52} />
-            <Tooltip
-              formatter={(v, key) => [formatTHB(Math.round(v)), SERIES_NAMES[key]]}
-              labelFormatter={formatThaiLongDate}
-            />
-            <Legend formatter={(key) => SERIES_NAMES[key]} wrapperStyle={{ fontSize: 12 }} />
-            <Line
-              type="monotone"
-              dataKey="sales"
-              stroke="#b45309"
-              strokeOpacity={0.25}
-              strokeWidth={1}
-              dot={false}
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="ma7"
-              stroke="#78350f"
-              strokeWidth={2.5}
-              dot={false}
-              connectNulls={false}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      <ChartCard title="ยอดขายรายวัน · ค่าเฉลี่ย 7 วัน">
+        <FixedChart3 rows={lab2Rows} />
       </ChartCard>
 
       <ChartCard title="ยอดขายแยกสาขา (มาก → น้อย)">
@@ -178,18 +135,15 @@ function DashboardCharts({ rows, products }) {
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* กราฟที่ซ่อมแล้วจาก Lab 2 (FixedChart2 ซ้ำกับกราฟยอดขายแยกสาขาด้านบน จึงไม่ใส่) */}
+      {/* กราฟที่ซ่อมแล้วจาก Lab 2 (กราฟ 2 ซ้ำกับยอดขายแยกสาขา และกราฟ 3 ใช้เป็นกราฟรายวันด้านบนแล้ว) */}
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <ChartCard title="เมนูขายดี 10 อันดับแรก">
           <FixedChart1 rows={lab2Rows} products={products} />
         </ChartCard>
-        <ChartCard title="ยอดขายรายสัปดาห์">
-          <FixedChart3 rows={lab2Rows} />
-        </ChartCard>
         <ChartCard title="ยอดเฉลี่ยต่อวัน รายเดือน">
           <FixedChart4 rows={lab2Rows} />
         </ChartCard>
-        <ChartCard title="ยอดเฉลี่ยต่อวันที่เปิดขาย แยกสาขา">
+        <ChartCard title="แต่ละสาขาเทียบกับตัวเอง (ช่วงล่าสุด vs ช่วงก่อน)">
           <FixedChart5 rows={lab2Rows} />
         </ChartCard>
       </div>
