@@ -41,7 +41,9 @@ export function FixedChart1({ rows, products }) {
   const data = all.slice(0, TOP_N);
   const [first, second] = all;
   const topShare = data.reduce((s, d) => s + d.share, 0);
-  const summary = `${first.name} ทำเงินสูงสุด ${thb(first.revenue)} (${pct(first.share)}) มากกว่าอันดับ 2 อย่าง${second.name} ${thb(first.revenue - second.revenue)} · ${TOP_N} อันดับแรกรวม ${pct(topShare)} จากทั้งหมด ${all.length} เมนู`;
+  if (!first) return <Frame summary="ไม่มีข้อมูลเมนูในช่วงที่เลือก" />;
+  const lead = second ? ` มากกว่าอันดับ 2 อย่าง${second.name} ${thb(first.revenue - second.revenue)}` : "";
+  const summary = `${first.name} ทำเงินสูงสุด ${thb(first.revenue)} (${pct(first.share)})${lead} · ${Math.min(TOP_N, all.length)} อันดับแรกรวม ${pct(topShare)} จากทั้งหมด ${all.length} เมนู`;
   return (
     <Frame summary={summary}>
       <ResponsiveContainer width="100%" height="100%">
@@ -106,6 +108,7 @@ export function FixedChart3({ rows }) {
   const sameStore = newBranches.length
     ? ` · ไม่นับ${newBranches.join(", ")}ที่เปิดทีหลัง ${growth(sameStoreData) >= 0 ? "โต" : "ลด"} ${pct(Math.abs(growth(sameStoreData)))}`
     : "";
+  if (n < 1) return <Frame summary="ช่วงที่เลือกมีสัปดาห์ที่ครบ 7 วันไม่ถึง 2 สัปดาห์ — เลือกช่วงให้ยาวขึ้นเพื่อดูแนวโน้ม" />;
   const summary = `ยอดขายเฉลี่ยต่อสัปดาห์ช่วง ${n} สัปดาห์ล่าสุด ${thb(lastAvg)} ${change >= 0 ? "โตขึ้น" : "ลดลง"} ${pct(Math.abs(change))} เทียบกับ ${n} สัปดาห์แรก (${thb(firstAvg)})${sameStore}`;
   return (
     <Frame summary={summary}>
@@ -132,12 +135,14 @@ export function FixedChart4({ rows }) {
   );
   const last = data[data.length - 1];
   const prev = data[data.length - 2];
-  const diff = last.perDay / prev.perDay - 1;
-  const summary = `${last.label} มีข้อมูลแค่ ${last.days} จาก ${last.full} วัน · ยอดเฉลี่ยต่อวัน ${thb(last.perDay)} ${diff >= 0 ? "สูงกว่า" : "ต่ำกว่า"} ${prev.label} ${pct(Math.abs(diff))} — ยอดรวมดูต่ำเพราะวันไม่ครบ`;
+  const diff = prev ? last.perDay / prev.perDay - 1 : null;
+  const days = last.partial ? `${last.label} มีข้อมูล ${last.days} จาก ${last.full} วัน` : `${last.label} ข้อมูลครบ ${last.full} วัน`;
+  const vsPrev = prev ? ` ${diff >= 0 ? "สูงกว่า" : "ต่ำกว่า"} ${prev.label} ${pct(Math.abs(diff))}` : "";
+  const summary = `${days} · ยอดเฉลี่ยต่อวัน ${thb(last.perDay)}${vsPrev}${last.partial ? " — เทียบต่อวันเพราะวันไม่ครบ" : ""}`;
   return (
     <Frame summary={summary}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 18, right: 8, left: 0, bottom: 0 }}>
+        <BarChart data={data} margin={{ top: 18, right: 20, left: 0, bottom: 0 }}>
           <CartesianGrid stroke={GRID} vertical={false} />
           <XAxis dataKey="label" tick={{ fontSize: 10 }} interval="preserveStartEnd" minTickGap={4} />
           <YAxis tickFormatter={compactTHB} width={52} tick={{ fontSize: 11 }} />
@@ -176,7 +181,9 @@ export function FixedChart5({ rows }) {
   const summary = `วัดด้วยยอดเฉลี่ยต่อวัน ${lowest.branch}ต่ำสุด ${thb(lowest.perDay)}/วัน${
     byTotal.branch !== lowest.branch
       ? ` ไม่ใช่${byTotal.branch}ที่ยอดรวมน้อยสุด (${byTotal.branch}เปิดขายเพียง ${byTotal.days} วัน)`
-      : ` · ${fewestDays.branch}เปิดขายน้อยสุด ${fewestDays.days} วัน`
+      : data.every((b) => b.days === fewestDays.days)
+        ? ` · ทุกสาขาเปิดขายเท่ากัน ${fewestDays.days} วัน`
+        : ` · ${fewestDays.branch}เปิดขายน้อยสุด ${fewestDays.days} วัน`
   }`;
   return (
     <Frame summary={summary}>
