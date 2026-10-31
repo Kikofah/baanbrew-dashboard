@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Papa from 'papaparse'
 import {
   computeKpis,
@@ -13,7 +13,7 @@ import { addDays, bangkokNowLocal } from './lib/options'
 import SalesFilters from './components/SalesFilters.jsx'
 import SalesForm from './components/SalesForm.jsx'
 import AuthButton from './components/AuthButton.jsx'
-import { useAuth } from './lib/useAuth'
+import { signIn, useAuth } from './lib/useAuth'
 import Lab2Page from './lab2/Lab2Page.jsx'
 import CustomersPage from './components/CustomersPage.jsx'
 import { prepareCustomers } from './lib/customerMetrics'
@@ -111,6 +111,27 @@ function ChartCard({ title, children }) {
   )
 }
 
+/** ยอดขายอ่านได้เฉพาะผู้ที่ล็อกอิน (firestore.rules) → แสดงการ์ดนี้แทนการยิง query ที่จะโดนปฏิเสธ */
+function SignInNotice() {
+  const [error, setError] = useState(null)
+  const onClick = () => signIn().catch((err) => setError(err.code === 'auth/unauthorized-domain'
+    ? 'โดเมนนี้ยังไม่ได้รับอนุญาต — เพิ่มใน Firebase Console › Authentication › Settings › Authorized domains'
+    : `เข้าสู่ระบบไม่สำเร็จ: ${err.message}`))
+  return (
+    <Notice>
+      <p className="font-medium text-stone-700">เข้าสู่ระบบเพื่อดูข้อมูลยอดขาย</p>
+      <p className="mt-1 text-sm">ข้อมูลยอดขายเปิดให้เฉพาะผู้ที่เข้าสู่ระบบแล้วเท่านั้น</p>
+      <button type="button" className="btn-primary mt-4" onClick={onClick}>เข้าสู่ระบบด้วย Google</button>
+      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+    </Notice>
+  )
+}
+
+const thaiFirestoreError = (message) =>
+  /insufficient permissions|permission/i.test(message)
+    ? 'Security Rules ไม่อนุญาตให้อ่านข้อมูลนี้ — ลองออกจากระบบแล้วเข้าสู่ระบบใหม่'
+    : message
+
 function Notice({ children, tone = 'muted' }) {
   const color = tone === 'error' ? 'text-red-600' : 'text-stone-500'
   return (
@@ -166,6 +187,7 @@ function App() {
   const [customers, setCustomers] = useState(null)
   const [filters, setFilters] = useState({ from: '', to: '', branch: '' })
   const [setupError, setSetupError] = useState(null)
+  const [rangeError, setRangeError] = useState(null)
   const hash = useHash()
   const auth = useAuth()
 
@@ -176,20 +198,26 @@ function App() {
       .catch((err) => setSetupError(err.message))
   }, [])
 
+  const signedIn = Boolean(auth.user)
+  const rangeLoaded = useRef(false)
+
   // Default range = the 30 days ending at the latest sale (1 read), or today if the collection is empty
+  // รอให้ล็อกอินก่อน: rules อนุญาตให้อ่าน sales เฉพาะผู้ที่ล็อกอิน · ทำครั้งเดียว ไม่ทับช่วงที่ผู้ใช้เลือกเอง
   useEffect(() => {
+    if (!signedIn || rangeLoaded.current) return undefined
     let cancelled = false
     latestSaleDate()
       .then((latest) => {
         if (cancelled) return
         const to = latest ?? bangkokNowLocal().slice(0, 10)
+        rangeLoaded.current = true
         setFilters((f) => ({ ...f, from: addDays(to, -29), to }))
       })
-      .catch((err) => !cancelled && setSetupError(err.message))
+      .catch((err) => !cancelled && setRangeError(err.message))
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [signedIn])
 
   const isLab2 = hash === '#lab2'
   const isCustomers = hash === '#customers'
@@ -200,7 +228,7 @@ function App() {
   const isOverview = !isLab2 && !isCustomers && !ownsData
 
   const validRange = Boolean(filters.from && filters.to && filters.from <= filters.to)
-  const listen = validRange && !ownsData
+  const listen = validRange && !ownsData && signedIn
   const { rows: rangeRows, loading, error } = useSales(listen ? filters.from : null, listen ? filters.to : null)
   // Branch is filtered here, not in the query: equality + range on two fields would need a composite index
   const rows = useMemo(
@@ -208,15 +236,22 @@ function App() {
     [rangeRows, filters.branch],
   )
 
-  const errorMessage = setupError ?? error
+  // rangeError/error มาจาก Firestore จึงนับเฉพาะตอนล็อกอินอยู่ (ออกจากระบบแล้วจะเห็นการ์ดเข้าสู่ระบบแทน)
+  const errorMessage = setupError ?? (signedIn ? rangeError ?? error : null)
 
   let content
   if (isLive) {
     content = <LiveTab />
   } else if (isRules) {
     content = <RulesTester />
+  } else if (setupError) {
+    content = <Notice tone="error">เกิดข้อผิดพลาด: {setupError}</Notice>
+  } else if (!auth.ready) {
+    content = <Notice>กำลังตรวจสอบการเข้าสู่ระบบ…</Notice>
+  } else if (!signedIn) {
+    content = <SignInNotice />
   } else if (errorMessage) {
-    content = <Notice tone="error">เกิดข้อผิดพลาด: {errorMessage}</Notice>
+    content = <Notice tone="error">เกิดข้อผิดพลาด: {thaiFirestoreError(errorMessage)}</Notice>
   } else if (!validRange && filters.from && filters.to) {
     content = <Notice>เลือกช่วงวันที่ให้ถูกต้อง</Notice>
   } else if (!rows) {
