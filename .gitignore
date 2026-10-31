@@ -26,3 +26,6 @@ secrets
 
 # Firebase config (copy .env.example to .env)
 .env
+
+# Firebase CLI cache (hosting deploy)
+.firebase/
