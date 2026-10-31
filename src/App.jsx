@@ -20,6 +20,7 @@ import { prepareCustomers } from './lib/customerMetrics'
 import { FixedChart1, FixedChart2, FixedChart3, FixedChart4, FixedChart5 } from './lab2/FixedCharts.jsx'
 // import หลัง ./lib/* เสมอ: lab3/firebase.js ใช้ Firebase app ที่ lib/firebase.js สร้างไว้แล้ว
 import LiveTab from './lab3/LiveTab.jsx'
+import RulesTester from './lab3/RulesTester.jsx'
 
 async function loadCsv(file) {
   const res = await fetch(`${import.meta.env.BASE_URL}${file}`)
@@ -34,6 +35,7 @@ const PAGES = [
   { hash: '#customers', label: 'ลูกค้า' },
   { hash: '#live', label: 'ยอดขายสด' },
   { hash: '#lab2', label: 'Lab 2.2 · ซ่อมกราฟ' },
+  { hash: '#rules', label: 'Lab 3.3 · ทดสอบ Rules' },
 ]
 
 function useHash() {
@@ -191,12 +193,14 @@ function App() {
 
   const isLab2 = hash === '#lab2'
   const isCustomers = hash === '#customers'
-  // แท็บสดมีตัวกรองและ onSnapshot ของตัวเอง → ไม่ต้องฟังยอดขายซ้ำที่นี่ (ประหยัดการอ่านเอกสาร)
   const isLive = hash === '#live'
-  const isOverview = !isLab2 && !isCustomers && !isLive
+  const isRules = hash === '#rules'
+  // แท็บสดและหน้าทดสอบ Rules จัดการข้อมูลเอง → ไม่ต้องฟังยอดขายที่นี่และไม่แสดงตัวกรอง (ประหยัดการอ่านเอกสาร)
+  const ownsData = isLive || isRules
+  const isOverview = !isLab2 && !isCustomers && !ownsData
 
   const validRange = Boolean(filters.from && filters.to && filters.from <= filters.to)
-  const listen = validRange && !isLive
+  const listen = validRange && !ownsData
   const { rows: rangeRows, loading, error } = useSales(listen ? filters.from : null, listen ? filters.to : null)
   // Branch is filtered here, not in the query: equality + range on two fields would need a composite index
   const rows = useMemo(
@@ -209,6 +213,8 @@ function App() {
   let content
   if (isLive) {
     content = <LiveTab />
+  } else if (isRules) {
+    content = <RulesTester />
   } else if (errorMessage) {
     content = <Notice tone="error">เกิดข้อผิดพลาด: {errorMessage}</Notice>
   } else if (!validRange && filters.from && filters.to) {
@@ -235,7 +241,7 @@ function App() {
   return (
     <div className="min-h-screen">
       <TopBar hash={hash} auth={auth}>
-        {!isLive && <SalesFilters value={filters} onChange={setFilters} loading={validRange && loading} />}
+        {!ownsData && <SalesFilters value={filters} onChange={setFilters} loading={validRange && loading} />}
       </TopBar>
       <main className="mx-auto max-w-6xl space-y-5 px-4 py-6 sm:space-y-6 sm:px-6 sm:py-8">
         {isOverview && (
