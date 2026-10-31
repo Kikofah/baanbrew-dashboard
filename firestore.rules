@@ -99,6 +99,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ---------- ผลวิเคราะห์ (Day 4) ----------
+    // เอกสารสรุป 5 ชิ้น (meta, daily, rfm, cohort, abc) อ่านได้เมื่อล็อกอิน
+    // เขียนได้เฉพาะ scripts/build-analytics.mjs ที่ใช้ firebase-admin (ข้าม rules) จึงปิดการเขียนจากเว็บ
+    match /analytics/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // ---------- ยอดขาย ----------
     match /sales/{saleId} {
       // อ่านได้เมื่อล็อกอิน

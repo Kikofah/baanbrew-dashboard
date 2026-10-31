@@ -21,6 +21,9 @@ import { FixedChart1, FixedChart2, FixedChart3, FixedChart4, FixedChart5 } from 
 // import หลัง ./lib/* เสมอ: lab3/firebase.js ใช้ Firebase app ที่ lib/firebase.js สร้างไว้แล้ว
 import LiveTab from './lab3/LiveTab.jsx'
 import RulesTester from './lab3/RulesTester.jsx'
+import CustomersTab from './lab4/CustomersTab.jsx'
+import ForecastTab from './lab4/ForecastTab.jsx'
+import { analyticsSource } from './lib/analyticsSource'
 
 async function loadCsv(file) {
   const res = await fetch(`${import.meta.env.BASE_URL}${file}`)
@@ -34,6 +37,8 @@ const PAGES = [
   { hash: '', label: 'ภาพรวม' },
   { hash: '#customers', label: 'ลูกค้า' },
   { hash: '#live', label: 'ยอดขายสด' },
+  { hash: '#rfm', label: 'ลูกค้า & เมนู' },
+  { hash: '#forecast', label: 'พยากรณ์ & ผิดปกติ' },
   { hash: '#lab2', label: 'Lab 2.2 · ซ่อมกราฟ' },
   { hash: '#rules', label: 'Lab 3.3 · ทดสอบ Rules' },
 ]
@@ -223,8 +228,11 @@ function App() {
   const isCustomers = hash === '#customers'
   const isLive = hash === '#live'
   const isRules = hash === '#rules'
-  // แท็บสดและหน้าทดสอบ Rules จัดการข้อมูลเอง → ไม่ต้องฟังยอดขายที่นี่และไม่แสดงตัวกรอง (ประหยัดการอ่านเอกสาร)
-  const ownsData = isLive || isRules
+  const isRfm = hash === '#rfm'
+  const isForecast = hash === '#forecast'
+  // แท็บเหล่านี้จัดการข้อมูลเอง → ไม่ต้องฟังยอดขายที่นี่และไม่แสดงตัวกรอง (ประหยัดการอ่านเอกสาร)
+  // แท็บ Day 4 อ่านแค่ 5 เอกสารใน analytics ห้ามอ่านยอดขายดิบจาก sales (CLAUDE.md)
+  const ownsData = isLive || isRules || isRfm || isForecast
   const isOverview = !isLab2 && !isCustomers && !ownsData
 
   const validRange = Boolean(filters.from && filters.to && filters.from <= filters.to)
@@ -244,6 +252,10 @@ function App() {
     content = <LiveTab />
   } else if (isRules) {
     content = <RulesTester />
+  } else if (isRfm) {
+    content = <CustomersTab source={analyticsSource} />
+  } else if (isForecast) {
+    content = <ForecastTab source={analyticsSource} />
   } else if (setupError) {
     content = <Notice tone="error">เกิดข้อผิดพลาด: {setupError}</Notice>
   } else if (!auth.ready) {

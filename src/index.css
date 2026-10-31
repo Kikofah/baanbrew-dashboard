@@ -49,6 +49,7 @@
   --color-emerald-800: #a7f3c9;
   --color-amber-100: #4a3410;
   --color-amber-700: #fbbf4a;
+  --color-amber-800: #fcd34d;
 }
 
 @layer base {
