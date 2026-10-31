@@ -4,9 +4,9 @@ import { customerStats, homeBranchShare } from '../lib/customerMetrics'
 import { formatNumber, formatTHB, formatThaiShortDate } from '../lib/metrics'
 import { daysInMonth, thaiMonth } from '../lab2/lab2Metrics'
 
-const MAIN = '#b45309'
-const GRID = '#e7e5e4'
-const LABEL = { fontSize: 11, fill: '#44403c' }
+const MAIN = '#e0893a'
+const GRID = '#3a322c'
+const LABEL = { fontSize: 11, fill: '#d9d0c7' }
 const pct = (v) => `${(v * 100).toFixed(1)}%`
 const thb = (v) => formatTHB(Math.round(v))
 // Averages from fewer buyers than this swing a lot between ranges, so the summary says so
@@ -107,7 +107,7 @@ export default function CustomersPage({ customers, rows, filters }) {
               <YAxis tickFormatter={formatNumber} width={44} tick={{ fontSize: 11 }} />
               <Tooltip
                 formatter={(v, _k, item) => [`${formatNumber(v)} คน · ซื้อในช่วงนี้ ${pct(item.payload.activeRate)}`, 'สมาชิก']}
-                cursor={{ fill: '#fef3c7' }}
+                cursor={{ fill: '#3a2a1c' }}
               />
               <Bar dataKey="members" fill={MAIN} radius={[3, 3, 0, 0]} isAnimationActive={false}>
                 <LabelList dataKey="members" position="top" formatter={formatNumber} style={LABEL} />
@@ -131,7 +131,7 @@ export default function CustomersPage({ customers, rows, filters }) {
               <YAxis tickFormatter={(v) => formatTHB(v)} width={56} tick={{ fontSize: 11 }} />
               <Tooltip
                 formatter={(v, _k, item) => [`${thb(v)}/คน (${formatNumber(item.payload.active)} คนที่ซื้อ)`, 'ยอดซื้อเฉลี่ย']}
-                cursor={{ fill: '#fef3c7' }}
+                cursor={{ fill: '#3a2a1c' }}
               />
               <Bar dataKey="avgSpend" fill={MAIN} radius={[3, 3, 0, 0]} isAnimationActive={false}>
                 <LabelList dataKey="avgSpend" position="top" formatter={thb} style={LABEL} />
@@ -156,7 +156,7 @@ export default function CustomersPage({ customers, rows, filters }) {
                   `${formatNumber(v)} คน${item.payload.partial ? ` (ข้อมูลถึงวันที่ ${Number(item.payload.lastDay)})` : ''}`,
                   'สมัครใหม่',
                 ]}
-                cursor={{ fill: '#fef3c7' }}
+                cursor={{ fill: '#3a2a1c' }}
               />
               <Bar dataKey="members" isAnimationActive={false} radius={[3, 3, 0, 0]}>
                 {months.map((m) => <Cell key={m.month} fill={MAIN} fillOpacity={m.partial ? 0.4 : 1} />)}
@@ -178,7 +178,7 @@ export default function CustomersPage({ customers, rows, filters }) {
               <YAxis type="category" dataKey="branch" width={84} tick={{ fontSize: 12 }} />
               <Tooltip
                 formatter={(v, _k, item) => [`${formatNumber(v)} คน · ซื้อในช่วงนี้ ${formatNumber(item.payload.active)} คน`, 'สมาชิก']}
-                cursor={{ fill: '#fef3c7' }}
+                cursor={{ fill: '#3a2a1c' }}
               />
               <Bar dataKey="members" fill={MAIN} radius={[0, 3, 3, 0]} isAnimationActive={false}>
                 <LabelList

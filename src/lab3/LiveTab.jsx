@@ -18,9 +18,9 @@ import SaleForm from "./SaleForm.jsx";
 import { SignInCard, UserMenu } from "./LiveAuth.jsx";
 import { useAuthUser } from "./useAuthUser.js";
 
-const MAIN = "#b45309";
-const MUTED = "#d6d3d1";
-const GRID = "#e7e5e4";
+const MAIN = "#e0893a";
+const MUTED = "#4a4039";
+const GRID = "#3a322c";
 const HIGHLIGHT_MS = 4000;
 const RECENT_N = 8;
 
@@ -244,7 +244,7 @@ function LiveDashboard({ user }) {
                         <CartesianGrid vertical={false} stroke={GRID} />
                         <XAxis dataKey="hour" tickFormatter={(h) => `${String(h).padStart(2, "0")}:00`} tick={{ fontSize: 11 }} />
                         <YAxis tickFormatter={compactTHB} tick={{ fontSize: 11 }} width={56} />
-                        <Tooltip formatter={(v) => [thb(v), "ยอดขาย"]} labelFormatter={(h) => `${String(h).padStart(2, "0")}:00–${String(h).padStart(2, "0")}:59 น.`} cursor={{ fill: "#fef3c7" }} />
+                        <Tooltip formatter={(v) => [thb(v), "ยอดขาย"]} labelFormatter={(h) => `${String(h).padStart(2, "0")}:00–${String(h).padStart(2, "0")}:59 น.`} cursor={{ fill: "#3a2a1c" }} />
                         <Bar dataKey="revenue" fill={MAIN} radius={[3, 3, 0, 0]} isAnimationActive={false} />
                       </BarChart>
                     ) : (
@@ -271,10 +271,10 @@ function LiveDashboard({ user }) {
                     <BarChart data={byBranch} layout="vertical" margin={{ top: 0, right: 64, left: 0, bottom: 0 }}>
                       <XAxis type="number" hide />
                       <YAxis type="category" dataKey="branch" width={84} tick={{ fontSize: 12 }} interval={0} />
-                      <Tooltip formatter={(v) => [thb(v), "ยอดขาย"]} cursor={{ fill: "#fef3c7" }} />
+                      <Tooltip formatter={(v) => [thb(v), "ยอดขาย"]} cursor={{ fill: "#3a2a1c" }} />
                       <Bar dataKey="revenue" radius={[0, 3, 3, 0]} isAnimationActive={false}>
                         {byBranch.map((d) => <Cell key={d.branch} fill={!branch || d.branch === branch ? MAIN : MUTED} />)}
-                        <LabelList dataKey="revenue" position="right" formatter={compactTHB} style={{ fontSize: 11, fill: "#44403c" }} />
+                        <LabelList dataKey="revenue" position="right" formatter={compactTHB} style={{ fontSize: 11, fill: "#d9d0c7" }} />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>

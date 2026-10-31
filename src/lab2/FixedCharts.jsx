@@ -12,8 +12,8 @@ import {
   dailySales, formatTHB, formatThaiShortDate, formatThaiLongDate, lineTotal, thaiDateKey, withMovingAverage,
 } from "../lib/metrics.js";
 
-const MAIN = "#b45309";
-const GRID = "#e7e5e4";
+const MAIN = "#e0893a";
+const GRID = "#3a322c";
 
 const thb = (v) => formatTHB(Math.round(v));
 const pct = (v) => `${(v * 100).toFixed(1)}%`;
@@ -52,9 +52,9 @@ export function FixedChart1({ rows, products }) {
         <BarChart data={data} layout="vertical" margin={{ top: 0, right: 64, left: 0, bottom: 0 }}>
           <XAxis type="number" hide />
           <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11 }} interval={0} />
-          <Tooltip formatter={(v, _k, item) => [`${thb(v)} (${pct(item.payload.share)})`, "ยอดขาย"]} cursor={{ fill: "#fef3c7" }} />
+          <Tooltip formatter={(v, _k, item) => [`${thb(v)} (${pct(item.payload.share)})`, "ยอดขาย"]} cursor={{ fill: "#3a2a1c" }} />
           <Bar dataKey="revenue" fill={MAIN} radius={[0, 3, 3, 0]} isAnimationActive={false}>
-            <LabelList dataKey="revenue" position="right" formatter={thb} style={{ fontSize: 11, fill: "#44403c" }} />
+            <LabelList dataKey="revenue" position="right" formatter={thb} style={{ fontSize: 11, fill: "#d9d0c7" }} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -78,9 +78,9 @@ export function FixedChart2({ rows }) {
           <CartesianGrid stroke={GRID} horizontal={false} />
           <XAxis type="number" domain={[0, "auto"]} tickFormatter={compactTHB} tick={{ fontSize: 11 }} />
           <YAxis type="category" dataKey="branch" width={84} tick={{ fontSize: 12 }} />
-          <Tooltip formatter={(v) => [thb(v), "ยอดขายรวม"]} cursor={{ fill: "#fef3c7" }} />
+          <Tooltip formatter={(v) => [thb(v), "ยอดขายรวม"]} cursor={{ fill: "#3a2a1c" }} />
           <Bar dataKey="revenue" fill={MAIN} radius={[0, 3, 3, 0]} isAnimationActive={false}>
-            <LabelList dataKey="revenue" position="right" formatter={thb} style={{ fontSize: 11, fill: "#44403c" }} />
+            <LabelList dataKey="revenue" position="right" formatter={thb} style={{ fontSize: 11, fill: "#d9d0c7" }} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -166,7 +166,7 @@ export function FixedChart4({ rows }) {
           <YAxis tickFormatter={compactTHB} width={52} tick={{ fontSize: 11 }} />
           <Tooltip
             formatter={(v, _k, item) => [`${thb(v)} / วัน (ข้อมูล ${item.payload.days}/${item.payload.full} วัน)`, "ยอดเฉลี่ยต่อวัน"]}
-            cursor={{ fill: "#fef3c7" }}
+            cursor={{ fill: "#3a2a1c" }}
           />
           <Bar dataKey="perDay" isAnimationActive={false}>
             {data.map((d) => <Cell key={d.month} fill={MAIN} fillOpacity={d.partial ? 0.4 : 1} />)}
@@ -221,16 +221,16 @@ export function FixedChart5({ rows }) {
           <CartesianGrid stroke={GRID} horizontal={false} />
           <XAxis type="number" domain={[-reach, reach]} ticks={ticks} tickFormatter={(v) => (v === 0 ? "0%" : signedPct(v))} tick={{ fontSize: 11 }} />
           <YAxis type="category" dataKey="branch" width={84} tick={{ fontSize: 12 }} />
-          <ReferenceLine x={0} stroke="#78716c" />
+          <ReferenceLine x={0} stroke="#a39890" />
           <Tooltip
             formatter={(v, _k, item) => [
               `${signedPct(v)} (${thb(item.payload.prevPerDay)} → ${thb(item.payload.curPerDay)} ต่อวัน)`,
               "เทียบช่วงก่อนหน้า",
             ]}
-            cursor={{ fill: "#fef3c7" }}
+            cursor={{ fill: "#3a2a1c" }}
           />
           <Bar dataKey="growth" fill={MAIN} radius={3} isAnimationActive={false}>
-            <LabelList dataKey="growth" position="right" formatter={signedPct} style={{ fontSize: 11, fill: "#44403c" }} />
+            <LabelList dataKey="growth" position="right" formatter={signedPct} style={{ fontSize: 11, fill: "#d9d0c7" }} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>

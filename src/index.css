@@ -1,27 +1,84 @@
 @import "tailwindcss";
 
+/*
+ * Dark theme (coffee-house at night).
+ * Components use plain Tailwind classes (bg-white, text-stone-800, ring-stone-200, bg-red-50 …),
+ * so instead of editing every JSX file we redefine those color tokens here:
+ *  - "white" is the card surface, and the stone scale is reversed (50 = darkest … 950 = lightest).
+ *    text-stone-800 therefore stays the main text color, ring-stone-200 stays a subtle border, etc.
+ *  - text-white sits on bright fills (brand, amber, light pills), so it now renders as dark text.
+ *  - light status tints (-50/-100) become dark tints, and their -600/-800 text becomes light.
+ * Charts in JS use matching hex values (see MAIN / GRID / MUTED in each chart file).
+ */
 @theme {
   --font-sans: "Anuphan", "Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif;
-  /* Brand: coffee browns. Charts use brand-600 (#b45309) as their single main color */
-  --color-brand-50: #fdf8f1;
-  --color-brand-100: #f6ead8;
-  --color-brand-600: #b45309;
-  --color-brand-700: #92400e;
-  --color-brand-800: #78350f;
-  --color-brand-900: #4a2a12;
-  --color-page: #fbf8f3;
+
+  /* Surfaces */
+  --color-page: #15110f;
+  --color-white: #1f1a17;
+
+  /* Warm neutrals, reversed for dark mode */
+  --color-stone-50: #29221e;
+  --color-stone-100: #2f2824;
+  --color-stone-200: #3a322c;
+  --color-stone-300: #4a4039;
+  --color-stone-400: #8a7f76;
+  --color-stone-500: #a39890;
+  --color-stone-600: #c2b8af;
+  --color-stone-700: #d9d0c7;
+  --color-stone-800: #ebe4dc;
+  --color-stone-900: #f5efe8;
+  --color-stone-950: #faf6f1;
+
+  /* Brand: coffee/caramel. Charts use brand-600 (#e0893a) as their single main color */
+  --color-brand-50: #241c16;
+  --color-brand-100: #3a2a1c;
+  --color-brand-600: #e0893a;
+  --color-brand-700: #e8994f;
+  --color-brand-800: #f2b06e;
+  --color-brand-900: #f6d3a8;
+
+  /* Status colors used for messages, highlights and badges */
+  --color-red-50: #3a1a19;
+  --color-red-200: #6b2c2a;
+  --color-red-600: #f87171;
+  --color-red-700: #fca5a5;
+  --color-red-800: #fecaca;
+  --color-emerald-50: #12301f;
+  --color-emerald-700: #6ee7a8;
+  --color-emerald-800: #a7f3c9;
+  --color-amber-100: #4a3410;
+  --color-amber-700: #fbbf4a;
 }
 
 @layer base {
+  :root {
+    /* Native controls (date picker, select menu, scrollbars) render in dark mode too */
+    color-scheme: dark;
+  }
   body {
     @apply bg-page text-stone-800 antialiased;
+  }
+
+  /* Recharts' default tooltip has an inline white background; match the dark cards instead */
+  .recharts-default-tooltip {
+    background-color: var(--color-white) !important;
+    border: 1px solid var(--color-stone-300) !important;
+    border-radius: 0.5rem;
+    color: var(--color-stone-800);
+  }
+  .recharts-cartesian-axis-tick-value {
+    fill: var(--color-stone-500);
+  }
+  .recharts-legend-item-text {
+    color: var(--color-stone-600) !important;
   }
 }
 
 @layer components {
   /* Surfaces */
   .card {
-    @apply rounded-2xl border border-stone-200/70 bg-white p-4 shadow-[0_1px_2px_rgba(74,42,18,0.04)] sm:p-5;
+    @apply rounded-2xl border border-stone-200/70 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.4)] sm:p-5;
   }
   .card-title {
     @apply text-sm font-semibold text-stone-900 sm:text-base;
@@ -61,18 +118,19 @@
     @apply flex flex-col gap-1 text-xs font-medium text-stone-500;
   }
   .input {
-    @apply w-full rounded-lg border border-stone-300 bg-white px-2.5 py-2 text-sm text-stone-900 transition
-      focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 focus:outline-none
+    @apply w-full rounded-lg border border-stone-300 bg-stone-50 px-2.5 py-2 text-sm text-stone-900 transition
+      placeholder:text-stone-400
+      focus:border-brand-600 focus:ring-2 focus:ring-brand-600/25 focus:outline-none
       disabled:bg-stone-100 disabled:text-stone-500;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-medium text-white
-      transition hover:bg-brand-800 focus-visible:ring-2 focus-visible:ring-brand-600/40 focus-visible:outline-none
-      disabled:cursor-not-allowed disabled:bg-stone-300;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-page
+      transition hover:bg-brand-800 focus-visible:ring-2 focus-visible:ring-brand-600/50 focus-visible:outline-none
+      disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500;
   }
   .btn-ghost {
     @apply inline-flex items-center justify-center rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium
-      text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60;
+      text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   /* Tabs in the top bar */
