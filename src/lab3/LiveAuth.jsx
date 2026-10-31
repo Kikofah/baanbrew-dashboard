@@ -1,7 +1,7 @@
 // Lab 3.2 · ล็อกอินด้วย Google สำหรับแท็บสด
-// SignInCard แสดงแทน Dashboard เมื่อยังไม่ล็อกอิน · UserMenu อยู่มุมขวาบน
+// SignInCard แสดงแทน Dashboard เมื่อยังไม่ล็อกอิน (ชื่อผู้ใช้และปุ่มออกจากระบบอยู่ที่แถบด้านบน: AuthButton)
 import { useState } from "react";
-import { signInWithPopup, signOut } from "firebase/auth";
+import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "./firebase.js";
 
 const AUTH_ERROR_TEXT = {
@@ -52,32 +52,6 @@ export function SignInCard() {
       </button>
       {!auth && <p className="mt-4 text-sm text-red-700">ยังไม่ได้ตั้งค่า Firebase — คัดลอก .env.example เป็น .env แล้วใส่ค่าโปรเจกต์</p>}
       {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">❌ {error}</p>}
-    </div>
-  );
-}
-
-export function UserMenu({ user }) {
-  const [error, setError] = useState(null);
-  const name = user.displayName || user.email || "ผู้ใช้";
-  return (
-    <div className="flex items-center gap-2">
-      {user.photoURL ? (
-        // Google avatar ต้องใช้ no-referrer ไม่งั้นบางครั้งโหลดรูปไม่ขึ้น
-        <img src={user.photoURL} alt="" referrerPolicy="no-referrer" className="h-8 w-8 rounded-full ring-1 ring-stone-200" />
-      ) : (
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-800">
-          {name.slice(0, 1).toUpperCase()}
-        </span>
-      )}
-      <span className="max-w-[12rem] truncate text-sm font-medium text-stone-700" title={user.email ?? undefined}>{name}</span>
-      <button
-        type="button"
-        onClick={() => signOut(auth).catch((e) => setError(`ออกจากระบบไม่สำเร็จ: ${e.message}`))}
-        className="rounded-lg px-2.5 py-1.5 text-sm text-stone-600 ring-1 ring-stone-200 hover:bg-stone-100"
-      >
-        ออกจากระบบ
-      </button>
-      {error && <span className="text-xs text-red-700">{error}</span>}
     </div>
   );
 }

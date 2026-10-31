@@ -15,7 +15,7 @@ import {
 } from "../lib/metrics.js";
 import KpiCard from "../components/KpiCard.jsx";
 import SaleForm from "./SaleForm.jsx";
-import { SignInCard, UserMenu } from "./LiveAuth.jsx";
+import { SignInCard } from "./LiveAuth.jsx";
 import { useAuthUser } from "./useAuthUser.js";
 
 const MAIN = "#e0893a";
@@ -125,14 +125,8 @@ export default function LiveTab() {
   const { status, user } = useAuthUser();
   if (status === "checking") return <p className="text-sm text-stone-500">กำลังตรวจสอบการเข้าสู่ระบบ…</p>;
   if (status === "signed-out") return <SignInCard />;
-  return (
-    <div className="space-y-3">
-      <div className="flex justify-end">
-        <UserMenu user={user} />
-      </div>
-      <LiveDashboard key={user.uid} user={user} />
-    </div>
-  );
+  // ชื่อผู้ใช้และปุ่มออกจากระบบอยู่ที่แถบด้านบนของเว็บแล้ว (AuthButton ใน App.jsx) จึงไม่แสดงซ้ำที่นี่
+  return <LiveDashboard key={user.uid} user={user} />;
 }
 
 function LiveDashboard({ user }) {
