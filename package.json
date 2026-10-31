@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:hosting": "vite build --base=/",
     "preview": "vite preview",
     "test": "vitest run",
     "seed:dry": "node scripts/seed.mjs --dry-run",
