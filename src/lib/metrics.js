@@ -149,3 +149,24 @@ export function prepareRows(rows) {
 export function dailyRevenue(rows) {
   return dailySales(rows).map(({ date, sales }) => ({ date, revenue: sales }))
 }
+
+/** [{ branch, revenue }] sorted by revenue descending — same as salesByBranch, named for Lab 3 */
+export function revenueByBranch(rows) {
+  return salesByBranch(rows).map(({ branch, sales }) => ({ branch, revenue: sales }))
+}
+
+/**
+ * [{ hour: 0–23, revenue }] for every hour from `fromHour` to `toHour` (empty hours = 0).
+ * The hour comes straight from the Thai ISO string ("…T16:05:09+07:00" -> 16), never via `new Date()`.
+ */
+export function hourlyRevenue(rows, fromHour = 0, toHour = 23) {
+  const byHour = new Map()
+  for (const row of rows) {
+    const hour = Number(String(row.datetime).slice(11, 13))
+    byHour.set(hour, (byHour.get(hour) ?? 0) + lineTotal(row))
+  }
+  const hours = [...byHour.keys()]
+  const from = Math.min(fromHour, ...hours)
+  const to = Math.max(toHour, ...hours)
+  return Array.from({ length: to - from + 1 }, (_, i) => ({ hour: from + i, revenue: byHour.get(from + i) ?? 0 }))
+}

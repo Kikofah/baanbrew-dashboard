@@ -18,6 +18,8 @@ import Lab2Page from './lab2/Lab2Page.jsx'
 import CustomersPage from './components/CustomersPage.jsx'
 import { prepareCustomers } from './lib/customerMetrics'
 import { FixedChart1, FixedChart2, FixedChart3, FixedChart4, FixedChart5 } from './lab2/FixedCharts.jsx'
+// import หลัง ./lib/* เสมอ: lab3/firebase.js ใช้ Firebase app ที่ lib/firebase.js สร้างไว้แล้ว
+import LiveTab from './lab3/LiveTab.jsx'
 
 async function loadCsv(file) {
   const res = await fetch(`${import.meta.env.BASE_URL}${file}`)
@@ -30,6 +32,7 @@ async function loadCsv(file) {
 const PAGES = [
   { hash: '', label: 'ภาพรวม' },
   { hash: '#customers', label: 'ลูกค้า' },
+  { hash: '#live', label: 'ยอดขายสด' },
   { hash: '#lab2', label: 'Lab 2.2 · ซ่อมกราฟ' },
 ]
 
@@ -78,9 +81,11 @@ function TopBar({ hash, auth, children }) {
           <AuthButton auth={auth} />
         </div>
       </div>
-      <div className="border-t border-stone-200/60">
-        <div className="mx-auto max-w-6xl px-4 py-2.5 sm:px-6">{children}</div>
-      </div>
+      {children && (
+        <div className="border-t border-stone-200/60">
+          <div className="mx-auto max-w-6xl px-4 py-2.5 sm:px-6">{children}</div>
+        </div>
+      )}
     </header>
   )
 }
@@ -184,20 +189,27 @@ function App() {
     }
   }, [])
 
+  const isLab2 = hash === '#lab2'
+  const isCustomers = hash === '#customers'
+  // แท็บสดมีตัวกรองและ onSnapshot ของตัวเอง → ไม่ต้องฟังยอดขายซ้ำที่นี่ (ประหยัดการอ่านเอกสาร)
+  const isLive = hash === '#live'
+  const isOverview = !isLab2 && !isCustomers && !isLive
+
   const validRange = Boolean(filters.from && filters.to && filters.from <= filters.to)
-  const { rows: rangeRows, loading, error } = useSales(validRange ? filters.from : null, validRange ? filters.to : null)
+  const listen = validRange && !isLive
+  const { rows: rangeRows, loading, error } = useSales(listen ? filters.from : null, listen ? filters.to : null)
   // Branch is filtered here, not in the query: equality + range on two fields would need a composite index
   const rows = useMemo(
     () => (rangeRows && filters.branch ? rangeRows.filter((r) => r.branch === filters.branch) : rangeRows),
     [rangeRows, filters.branch],
   )
 
-  const isLab2 = hash === '#lab2'
-  const isCustomers = hash === '#customers'
   const errorMessage = setupError ?? error
 
   let content
-  if (errorMessage) {
+  if (isLive) {
+    content = <LiveTab />
+  } else if (errorMessage) {
     content = <Notice tone="error">เกิดข้อผิดพลาด: {errorMessage}</Notice>
   } else if (!validRange && filters.from && filters.to) {
     content = <Notice>เลือกช่วงวันที่ให้ถูกต้อง</Notice>
@@ -223,10 +235,10 @@ function App() {
   return (
     <div className="min-h-screen">
       <TopBar hash={hash} auth={auth}>
-        <SalesFilters value={filters} onChange={setFilters} loading={validRange && loading} />
+        {!isLive && <SalesFilters value={filters} onChange={setFilters} loading={validRange && loading} />}
       </TopBar>
       <main className="mx-auto max-w-6xl space-y-5 px-4 py-6 sm:space-y-6 sm:px-6 sm:py-8">
-        {!isLab2 && !isCustomers && (
+        {isOverview && (
           <div>
             <h1 className="page-title">ภาพรวมยอดขาย</h1>
             <p className="page-subtitle">
@@ -235,7 +247,7 @@ function App() {
             </p>
           </div>
         )}
-        {!isLab2 && !isCustomers && <SalesForm products={products} auth={auth} />}
+        {isOverview && <SalesForm products={products} auth={auth} />}
         {content}
       </main>
     </div>
