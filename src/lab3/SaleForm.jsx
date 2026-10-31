@@ -73,7 +73,7 @@ export default function SaleForm({ products, productsError, uid }) {
     } catch (err) {
       setResult({
         ok: false,
-        text: err.code === "permission-denied" ? "ถูกปฏิเสธโดย Security Rules" : `บันทึกไม่สำเร็จ: ${err.message}`,
+        text: err.code === "permission-denied" ? "ถูกปฏิเสธโดย Security Rules · ตรวจว่าบัญชีได้รับสิทธิ์พนักงานแล้ว (npm run grant-staff)" : `บันทึกไม่สำเร็จ: ${err.message}`,
       });
     } finally {
       setSaving(false);

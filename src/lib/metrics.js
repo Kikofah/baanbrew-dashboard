@@ -170,3 +170,15 @@ export function hourlyRevenue(rows, fromHour = 0, toHour = 23) {
   const to = Math.max(toHour, ...hours)
   return Array.from({ length: to - from + 1 }, (_, i) => ({ hour: from + i, revenue: byHour.get(from + i) ?? 0 }))
 }
+
+/** ฿ แบบจำนวนเต็ม เช่น 1234.6 -> "฿1,235" (ใช้ในแท็บ Day 4) */
+export function fmtBaht(value) {
+  return formatTHB(Math.round(value))
+}
+
+const compactFormatter = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
+
+/** ฿ แบบย่อสำหรับแกนกราฟ เช่น 1250000 -> "฿1.3M" */
+export function fmtShortBaht(value) {
+  return `฿${compactFormatter.format(value)}`
+}

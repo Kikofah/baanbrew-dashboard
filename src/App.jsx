@@ -21,6 +21,9 @@ import { FixedChart1, FixedChart2, FixedChart3, FixedChart4, FixedChart5 } from 
 // import หลัง ./lib/* เสมอ: lab3/firebase.js ใช้ Firebase app ที่ lib/firebase.js สร้างไว้แล้ว
 import LiveTab from './lab3/LiveTab.jsx'
 import RulesTester from './lab3/RulesTester.jsx'
+import CustomersTab from './lab4/CustomersTab.jsx'
+import ForecastTab from './lab4/ForecastTab.jsx'
+import { analyticsSource } from './lib/analyticsSource'
 
 async function loadCsv(file) {
   const res = await fetch(`${import.meta.env.BASE_URL}${file}`)
@@ -34,6 +37,8 @@ const PAGES = [
   { hash: '', label: 'ภาพรวม' },
   { hash: '#customers', label: 'ลูกค้า' },
   { hash: '#live', label: 'ยอดขายสด' },
+  { hash: '#rfm', label: 'ลูกค้า & เมนู' },
+  { hash: '#forecast', label: 'พยากรณ์ & ผิดปกติ' },
   { hash: '#lab2', label: 'Lab 2.2 · ซ่อมกราฟ' },
   { hash: '#rules', label: 'Lab 3.3 · ทดสอบ Rules' },
 ]
@@ -129,7 +134,7 @@ function SignInNotice() {
 
 const thaiFirestoreError = (message) =>
   /insufficient permissions|permission/i.test(message)
-    ? 'Security Rules ไม่อนุญาตให้อ่านข้อมูลนี้ — ลองออกจากระบบแล้วเข้าสู่ระบบใหม่'
+    ? 'บัญชีนี้ยังไม่ได้รับสิทธิ์พนักงาน ให้ผู้ดูแลรัน npm run grant-staff -- อีเมลของคุณ แล้วออกจากระบบ-เข้าใหม่ 1 ครั้ง'
     : message
 
 function Notice({ children, tone = 'muted' }) {
@@ -187,15 +192,19 @@ function App() {
   const [customers, setCustomers] = useState(null)
   const [filters, setFilters] = useState({ from: '', to: '', branch: '' })
   const [setupError, setSetupError] = useState(null)
+  const [customersError, setCustomersError] = useState(null)
   const [rangeError, setRangeError] = useState(null)
   const hash = useHash()
   const auth = useAuth()
 
   useEffect(() => {
     loadCsv('products.csv').then(setProducts).catch((err) => setSetupError(err.message))
+    // ข้อมูลสมาชิกเป็นข้อมูลส่วนบุคคล (PDPA): โหลดเฉพาะตอน dev · เว็บที่ deploy ไม่มีไฟล์นี้ (vite.config.js)
+    // โหลดไม่สำเร็จให้กระทบแค่หน้า "ลูกค้า" ไม่บล็อกทุกหน้า
+    if (!import.meta.env.DEV) return
     loadCsv('customers_clean.csv')
       .then((raw) => setCustomers(prepareCustomers(raw)))
-      .catch((err) => setSetupError(err.message))
+      .catch((err) => setCustomersError(err.message))
   }, [])
 
   const signedIn = Boolean(auth.user)
@@ -223,8 +232,11 @@ function App() {
   const isCustomers = hash === '#customers'
   const isLive = hash === '#live'
   const isRules = hash === '#rules'
-  // แท็บสดและหน้าทดสอบ Rules จัดการข้อมูลเอง → ไม่ต้องฟังยอดขายที่นี่และไม่แสดงตัวกรอง (ประหยัดการอ่านเอกสาร)
-  const ownsData = isLive || isRules
+  const isRfm = hash === '#rfm'
+  const isForecast = hash === '#forecast'
+  // แท็บเหล่านี้จัดการข้อมูลเอง → ไม่ต้องฟังยอดขายที่นี่และไม่แสดงตัวกรอง (ประหยัดการอ่านเอกสาร)
+  // แท็บ Day 4 อ่านแค่ 5 เอกสารใน analytics ห้ามอ่านยอดขายดิบจาก sales (CLAUDE.md)
+  const ownsData = isLive || isRules || isRfm || isForecast
   const isOverview = !isLab2 && !isCustomers && !ownsData
 
   const validRange = Boolean(filters.from && filters.to && filters.from <= filters.to)
@@ -244,6 +256,10 @@ function App() {
     content = <LiveTab />
   } else if (isRules) {
     content = <RulesTester />
+  } else if (isRfm) {
+    content = <CustomersTab source={analyticsSource} />
+  } else if (isForecast) {
+    content = <ForecastTab source={analyticsSource} products={products} />
   } else if (setupError) {
     content = <Notice tone="error">เกิดข้อผิดพลาด: {setupError}</Notice>
   } else if (!auth.ready) {
@@ -264,9 +280,21 @@ function App() {
       </Notice>
     )
   } else if (isCustomers) {
-    content = customers
-      ? <CustomersPage customers={customers} rows={rows} filters={filters} />
-      : <Notice>กำลังโหลดข้อมูลลูกค้า…</Notice>
+    if (!import.meta.env.DEV) {
+      content = (
+        <Notice>
+          <p className="font-medium text-stone-700">ข้อมูลสมาชิกไม่เผยแพร่บนเว็บ</p>
+          <p className="mt-1 text-sm">ชื่อเล่น เพศ อายุ และสาขาประจำของสมาชิกเป็นข้อมูลส่วนบุคคลตาม PDPA จึงดูได้เฉพาะในเครื่องที่รัน npm run dev</p>
+          <p className="mt-1 text-sm">ภาพรวมกลุ่มลูกค้าดูได้ที่แท็บ "ลูกค้า &amp; เมนู"</p>
+        </Notice>
+      )
+    } else if (customersError) {
+      content = <Notice tone="error">โหลดข้อมูลลูกค้าไม่สำเร็จ: {customersError}</Notice>
+    } else {
+      content = customers
+        ? <CustomersPage customers={customers} rows={rows} filters={filters} />
+        : <Notice>กำลังโหลดข้อมูลลูกค้า…</Notice>
+    }
   } else if (isLab2) {
     content = <Lab2Page rows={prepareRows(rows)} products={products} />
   } else {

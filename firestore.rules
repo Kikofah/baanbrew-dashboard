@@ -15,6 +15,14 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // พนักงานร้าน = ล็อกอินแล้ว และบัญชีได้รับ custom claim staff = true
+    // "ล็อกอินด้วย Google" อย่างเดียวไม่พอ เพราะบัญชี Google ใดในโลกก็ล็อกอินได้ (ข้อมูลลูกค้าเป็นข้อมูลส่วนบุคคลตาม PDPA)
+    // ให้สิทธิ์ด้วย: npm run grant-staff -- อีเมล  (scripts/grant-staff.mjs) แล้วออกจากระบบ-เข้าใหม่ 1 ครั้ง
+    // ไม่ใส่รายชื่ออีเมลไว้ในไฟล์นี้ เพราะ repo เป็นสาธารณะ
+    function isStaff() {
+      return signedIn() && request.auth.token.staff == true;
+    }
+
     // 5 สาขา และ 5 วิธีชำระเงิน — ต้องตรงกับ BRANCHES และ PAYMENTS ใน src/lab3/saleModel.js
     function branches() {
       return ['สยาม', 'สีลม', 'อารีย์', 'บางนา', 'มหาวิทยาลัย'];
@@ -91,22 +99,30 @@ service cloud.firestore {
     // ---------- เมนู และ สาขา ----------
     // อ่านได้เมื่อล็อกอิน · เขียนไม่ได้เลยจากเว็บ (แก้ผ่าน seed script ที่ใช้ admin เท่านั้น)
     match /products/{productId} {
-      allow read: if signedIn();
+      allow read: if isStaff();
       allow write: if false;
     }
     match /branches/{branchId} {
-      allow read: if signedIn();
+      allow read: if isStaff();
+      allow write: if false;
+    }
+
+    // ---------- ผลวิเคราะห์ (Day 4) ----------
+    // เอกสารสรุป 5 ชิ้น (meta, daily, rfm, cohort, abc) อ่านได้เมื่อล็อกอิน
+    // เขียนได้เฉพาะ scripts/build-analytics.mjs ที่ใช้ firebase-admin (ข้าม rules) จึงปิดการเขียนจากเว็บ
+    match /analytics/{docId} {
+      allow read: if isStaff();
       allow write: if false;
     }
 
     // ---------- ยอดขาย ----------
     match /sales/{saleId} {
       // อ่านได้เมื่อล็อกอิน
-      allow read: if signedIn();
+      allow read: if isStaff();
 
       // สร้างได้เมื่อล็อกอิน และข้อมูลต้องผ่านทุกเงื่อนไขของ isValidNewSale()
       // หมายเหตุ: setDoc ทับเอกสารที่มีอยู่แล้วนับเป็น update จึงถูกปฏิเสธ — เขียนทับยอดเดิมไม่ได้
-      allow create: if signedIn() && isValidNewSale(request.resource.data);
+      allow create: if isStaff() && isValidNewSale(request.resource.data);
 
       // ยอดขายที่บันทึกแล้วแก้ไขหรือลบไม่ได้ (ถ้าบันทึกผิดให้บันทึกรายการปรับยอดแทน)
       allow update, delete: if false;
