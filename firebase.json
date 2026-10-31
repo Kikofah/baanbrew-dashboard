@@ -4,7 +4,22 @@
   },
   "hosting": {
     "public": "dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "customers_clean.csv",
+      "customers.xlsx",
+      "sales.csv",
+      "sales_clean.csv",
+      "sales.xlsx",
+      "sales_raw.xlsx"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
   }
 }

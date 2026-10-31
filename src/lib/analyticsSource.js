@@ -56,6 +56,9 @@ export const demoSource = {
   },
 }
 
-/** เติม ?demo ท้าย URL เพื่อใช้โหมดสาธิต */
-export const isDemo = new URLSearchParams(window.location.search).has('demo')
+/**
+ * เติม ?demo ท้าย URL เพื่อใช้โหมดสาธิต · ใช้ได้เฉพาะ npm run dev
+ * (โหมดสาธิตต้องโหลด sales.csv ซึ่งมีรหัสสมาชิก จึงไม่ติดไปกับเว็บที่ deploy ดู vite.config.js)
+ */
+export const isDemo = import.meta.env.DEV && new URLSearchParams(window.location.search).has('demo')
 export const analyticsSource = isDemo ? demoSource : firebaseSource

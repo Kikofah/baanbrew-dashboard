@@ -11,7 +11,7 @@ export function useAnalytics(source) {
     setError(null);
     source.loadAnalytics().then(setData).catch((e) => setError(
       e.code === "permission-denied"
-        ? "อ่านผลวิเคราะห์ไม่ได้: Security Rules ยังไม่เปิดให้อ่าน collection analytics (ดู Lab 4.2 ขั้น rules)"
+        ? "อ่านผลวิเคราะห์ไม่ได้: บัญชีนี้ยังไม่ได้รับสิทธิ์พนักงาน ให้ผู้ดูแลรัน npm run grant-staff -- อีเมลของคุณ แล้วออกจากระบบ-เข้าใหม่ 1 ครั้ง (หรือ rules ของ collection analytics ยังไม่ได้ deploy)"
         : e.message
     ));
   }, [source, user]);

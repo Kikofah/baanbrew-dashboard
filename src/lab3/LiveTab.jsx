@@ -34,7 +34,7 @@ const thb = (v) => formatTHB(Math.round(v));
 const compactTHB = (v) => `฿${new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(v)}`;
 
 const ERROR_TEXT = {
-  "permission-denied": "Security Rules ไม่อนุญาตให้อ่าน collection sales — ตรวจ Rules หรือเข้าสู่ระบบก่อน",
+  "permission-denied": "บัญชีนี้ยังไม่ได้รับสิทธิ์พนักงาน ให้ผู้ดูแลรัน npm run grant-staff -- อีเมลของคุณ แล้วออกจากระบบ-เข้าใหม่ 1 ครั้ง",
   unauthenticated: "ต้องเข้าสู่ระบบก่อนจึงจะอ่านข้อมูลได้",
   "failed-precondition": "Query นี้ต้องใช้ index — เปิดลิงก์ใน Console ของเบราว์เซอร์เพื่อสร้าง index",
   unavailable: "เชื่อมต่อ Firestore ไม่ได้ (ออฟไลน์?) ระบบจะลองเชื่อมต่อใหม่เอง",
